@@ -1,0 +1,191 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "agenda": "Agenda",
+    "finances": "Finances",
+    "offload": "Offload",
+    "profile": "Profil"
+  },
+  "greeting": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir"
+  },
+  "home": {
+    "title": "Accueil",
+    "todaySummary": "Aujourd'hui vous avez <meetings>{{meetings}} réunions</meetings>, <bills>{{bills}} facture</bills> à payer et <tasks>{{tasks}} tâches</tasks> en attente.",
+    "tasks": "Tâches",
+    "bills": "Factures",
+    "events": "Événements",
+    "todayTasks": "Tâches d'Aujourd'hui",
+    "aiSuggestion": "Suggestion Intelligente",
+    "aiSuggestionText": "Vous faites habituellement vos courses le vendredi. Voulez-vous que je crée un rappel pour demain ?",
+    "createReminder": "Créer un rappel",
+    "ignore": "Ignorer"
+  },
+  "agenda": {
+    "title": "Agenda",
+    "new": "Nouveau",
+    "todayEvents": "Événements d'Aujourd'hui",
+    "months": ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
+    "weekDays": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+    "categories": {
+      "work": "travail",
+      "family": "famille",
+      "personal": "personnel"
+    }
+  },
+  "finances": {
+    "title": "Finances",
+    "add": "Ajouter",
+    "monthSpending": "Dépenses ce mois",
+    "lessLastMonth": "{{percent}}% de moins que le mois dernier",
+    "moreLastMonth": "{{percent}}% de plus que le mois dernier",
+    "categories": "Catégories",
+    "bills": "Factures",
+    "home": "Maison",
+    "transport": "Transport",
+    "studies": "Études",
+    "shopping": "Achats",
+    "above": "{{percent}}% au-dessus",
+    "remaining": "{{percent}}% restant",
+    "due": "Échéance : {{date}}",
+    "paid": "Payé",
+    "pending": "En attente"
+  },
+  "offload": {
+    "title": "Offload",
+    "subtitle": "Libérez votre esprit. L'IA organise pour vous.",
+    "placeholder": "Qu'avez-vous en tête ? Écrivez librement...",
+    "process": "Traiter",
+    "aiHint": "L'IA va identifier et créer automatiquement",
+    "trySaying": "Essayez de dire",
+    "createType": "Créer {{type}}",
+    "listening": "Écoute en cours...",
+    "speakMind": "Dites ce que vous pensez",
+    "cancel": "Annuler",
+    "readAloud": "Lire à voix haute",
+    "suggestions": {
+      "reminder": "Rappelle-moi de payer la facture d'électricité le 15",
+      "event": "Réunion avec le chef à 14h mardi",
+      "task": "Je dois acheter du lait au supermarché",
+      "expense": "J'ai dépensé 50€ pour le déjeuner aujourd'hui"
+    },
+    "types": {
+      "reminder": "rappel",
+      "event": "événement",
+      "task": "tâche",
+      "expense": "dépense"
+    },
+    "speechNotSupported": "Votre navigateur ne prend pas en charge la reconnaissance vocale."
+  },
+  "profile": {
+    "title": "Profil",
+    "premium": "Gratuit",
+    "upgradePremium": "Passer à Premium",
+    "unlimitedAutomations": "Automatisations illimitées",
+    "viewPlans": "Voir les plans",
+    "mode": "Mode",
+    "settings": "Paramètres",
+    "notifications": "Notifications",
+    "darkTheme": "Thème sombre",
+    "privacy": "Confidentialité",
+    "language": "Langue",
+    "autoReadResponses": "Auto-lire les réponses",
+    "voiceQuality": "Qualité vocale",
+    "voiceStandard": "Standard",
+    "voicePremium": "Premium",
+    "version": "MindFlow v1.0.0",
+    "modes": {
+      "professional": "Professionnel",
+      "student": "Étudiant",
+      "family": "Famille"
+    },
+    "languages": {
+      "pt-BR": "Português (BR)",
+      "en-US": "English (US)",
+      "fr-FR": "Français (FR)",
+      "es-ES": "Español (ES)"
+    }
+  },
+  "onboarding": {
+    "skip": "Passer",
+    "next": "Suivant",
+    "start": "Commencer",
+    "slides": {
+      "mind": {
+        "title": "Libérez votre esprit",
+        "description": "MindFlow s'occupe du reste. Dites adieu à la surcharge mentale."
+      },
+      "agenda": {
+        "title": "Agenda intelligent unifié",
+        "description": "Tous vos rendez-vous, événements et tâches en un seul endroit."
+      },
+      "expenses": {
+        "title": "Contrôle automatique des dépenses",
+        "description": "Suivez vos dépenses, factures et budgets sans effort."
+      },
+      "ai": {
+        "title": "IA qui apprend avec vous",
+        "description": "Rappels et automatisations personnalisés pour votre routine."
+      }
+    }
+  },
+  "login": {
+    "title": "MindFlow",
+    "subtitle": "Connectez-vous à votre compte",
+    "email": "Votre e-mail",
+    "password": "Votre mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "submit": "Se connecter",
+    "loading": "Connexion...",
+    "orContinueWith": "ou continuer avec",
+    "noAccount": "Pas de compte ?",
+    "createAccount": "Créer un compte",
+    "welcomeBack": "Bon retour !",
+    "loginSuccess": "Connexion réussie.",
+    "comingSoon": "Bientôt",
+    "googleSoon": "La connexion Google sera bientôt disponible.",
+    "appleSoon": "La connexion Apple sera bientôt disponible."
+  },
+  "register": {
+    "title": "Créer un Compte",
+    "subtitle": "Commencez à organiser votre vie",
+    "name": "Votre nom",
+    "email": "Votre e-mail",
+    "password": "Créez un mot de passe",
+    "minChars": "Minimum 6 caractères",
+    "submit": "Créer un compte",
+    "loading": "Création du compte...",
+    "terms": "En créant un compte, vous acceptez nos",
+    "termsOfUse": "Conditions d'utilisation",
+    "and": "et",
+    "privacyPolicy": "Politique de confidentialité",
+    "hasAccount": "Vous avez déjà un compte ?",
+    "login": "Se connecter",
+    "accountCreated": "Compte créé !",
+    "welcome": "Bienvenue sur MindFlow."
+  },
+  "modeSelect": {
+    "title": "Comment allez-vous utiliser MindFlow ?",
+    "subtitle": "Choisissez un mode pour personnaliser votre expérience. Vous pouvez changer plus tard.",
+    "continue": "Continuer",
+    "modes": {
+      "professional": {
+        "name": "Professionnel",
+        "description": "Pour ceux qui travaillent et ont besoin d'organiser réunions, projets et délais",
+        "features": ["Réunions et projets", "Délais et livrables", "Dépenses de travail"]
+      },
+      "student": {
+        "name": "Étudiant",
+        "description": "Pour ceux qui étudient et ont besoin de gérer cours, travaux et examens",
+        "features": ["Horaires de cours", "Travaux et examens", "Objectifs d'études"]
+      },
+      "family": {
+        "name": "Famille",
+        "description": "Pour ceux qui s'occupent d'une famille et coordonnent les activités",
+        "features": ["Agenda partagé", "Dépenses familiales", "Tâches ménagères"]
+      }
+    }
+  }
+}
