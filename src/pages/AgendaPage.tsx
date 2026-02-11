@@ -2,22 +2,23 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const AgendaPage = () => {
+  const { t } = useTranslation();
   const [currentDate] = useState(new Date());
-  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const monthNames = t("agenda.months", { returnObjects: true }) as string[];
+  const weekDays = t("agenda.weekDays", { returnObjects: true }) as string[];
   
   const events = [
-    { time: "09:00", title: "Reunião de equipe", category: "trabalho", color: "bg-primary" },
-    { time: "12:00", title: "Almoço com cliente", category: "trabalho", color: "bg-mindflow-sunrise" },
-    { time: "15:00", title: "Buscar filho na escola", category: "família", color: "bg-secondary" },
-    { time: "18:00", title: "Academia", category: "pessoal", color: "bg-mindflow-zen" },
+    { time: "09:00", title: "Reunião de equipe", category: t("agenda.categories.work"), color: "bg-primary" },
+    { time: "12:00", title: "Almoço com cliente", category: t("agenda.categories.work"), color: "bg-mindflow-sunrise" },
+    { time: "15:00", title: "Buscar filho na escola", category: t("agenda.categories.family"), color: "bg-secondary" },
+    { time: "18:00", title: "Academia", category: t("agenda.categories.personal"), color: "bg-mindflow-zen" },
   ];
 
-  const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
   const today = currentDate.getDate();
 
-  // Generate week days around today
   const generateWeekDays = () => {
     const days = [];
     for (let i = -3; i <= 3; i++) {
@@ -34,18 +35,16 @@ const AgendaPage = () => {
 
   return (
     <div className="min-h-screen bg-background safe-top">
-      {/* Header */}
       <header className="px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-foreground">Agenda</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t("agenda.title")}</h1>
           <Button size="sm" className="gradient-calm text-white border-0">
             <Plus className="w-4 h-4 mr-1" />
-            Novo
+            {t("agenda.new")}
           </Button>
         </div>
       </header>
 
-      {/* Month Navigation */}
       <div className="px-5 py-3">
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="icon" className="text-muted-foreground">
@@ -60,7 +59,6 @@ const AgendaPage = () => {
         </div>
       </div>
 
-      {/* Week View */}
       <div className="px-5 py-3">
         <div className="flex justify-between">
           {generateWeekDays().map((item, index) => (
@@ -81,9 +79,8 @@ const AgendaPage = () => {
         </div>
       </div>
 
-      {/* Events List */}
       <section className="px-5 py-4">
-        <h3 className="text-lg font-semibold text-foreground mb-3">Eventos de Hoje</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-3">{t("agenda.todayEvents")}</h3>
         <div className="space-y-3">
           {events.map((event, index) => (
             <Card key={index} className="shadow-card border-0 overflow-hidden">

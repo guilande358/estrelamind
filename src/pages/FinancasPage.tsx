@@ -1,14 +1,17 @@
-import { TrendingUp, TrendingDown, CreditCard, Home, Car, GraduationCap, ShoppingBag, Plus } from "lucide-react";
+import { TrendingDown, CreditCard, Home, Car, GraduationCap, ShoppingBag, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useTranslation } from "react-i18next";
 
 const FinancasPage = () => {
+  const { t } = useTranslation();
+
   const categories = [
-    { name: "Casa", icon: Home, spent: 1200, budget: 1500, color: "bg-primary" },
-    { name: "Transporte", icon: Car, spent: 450, budget: 500, color: "bg-secondary" },
-    { name: "Estudos", icon: GraduationCap, spent: 300, budget: 400, color: "bg-mindflow-zen" },
-    { name: "Compras", icon: ShoppingBag, spent: 680, budget: 600, color: "bg-mindflow-sunrise" },
+    { name: t("finances.home"), icon: Home, spent: 1200, budget: 1500, color: "bg-primary" },
+    { name: t("finances.transport"), icon: Car, spent: 450, budget: 500, color: "bg-secondary" },
+    { name: t("finances.studies"), icon: GraduationCap, spent: 300, budget: 400, color: "bg-mindflow-zen" },
+    { name: t("finances.shopping"), icon: ShoppingBag, spent: 680, budget: 600, color: "bg-mindflow-sunrise" },
   ];
 
   const bills = [
@@ -23,22 +26,20 @@ const FinancasPage = () => {
 
   return (
     <div className="min-h-screen bg-background safe-top">
-      {/* Header */}
       <header className="px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-foreground">Finanças</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t("finances.title")}</h1>
           <Button size="sm" className="gradient-calm text-white border-0">
             <Plus className="w-4 h-4 mr-1" />
-            Adicionar
+            {t("finances.add")}
           </Button>
         </div>
       </header>
 
-      {/* Summary Card */}
       <div className="px-5 py-3">
         <Card className="shadow-soft border-0 gradient-nature text-white overflow-hidden">
           <CardContent className="p-5">
-            <p className="text-white/80 text-sm">Gastos este mês</p>
+            <p className="text-white/80 text-sm">{t("finances.monthSpending")}</p>
             <div className="flex items-end gap-2 mt-1">
               <span className="text-3xl font-bold">R$ {totalSpent.toLocaleString()}</span>
               <span className="text-white/70 text-sm mb-1">/ R$ {totalBudget.toLocaleString()}</span>
@@ -46,16 +47,15 @@ const FinancasPage = () => {
             <div className="mt-4 flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <TrendingDown className="w-4 h-4" />
-                <span className="text-sm">12% menos que mês passado</span>
+                <span className="text-sm">{t("finances.lessLastMonth", { percent: 12 })}</span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Categories */}
       <section className="px-5 py-4">
-        <h2 className="text-lg font-semibold text-foreground mb-3">Categorias</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">{t("finances.categories")}</h2>
         <div className="grid grid-cols-2 gap-3">
           {categories.map((category, index) => {
             const Icon = category.icon;
@@ -79,7 +79,9 @@ const FinancasPage = () => {
                     className={`h-1.5 mt-2 ${isOverBudget ? 'bg-destructive/20' : ''}`}
                   />
                   <p className={`text-xs mt-1 ${isOverBudget ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {isOverBudget ? `${percentage - 100}% acima` : `${100 - percentage}% restante`}
+                    {isOverBudget 
+                      ? t("finances.above", { percent: percentage - 100 })
+                      : t("finances.remaining", { percent: 100 - percentage })}
                   </p>
                 </CardContent>
               </Card>
@@ -88,9 +90,8 @@ const FinancasPage = () => {
         </div>
       </section>
 
-      {/* Bills */}
       <section className="px-5 py-4">
-        <h2 className="text-lg font-semibold text-foreground mb-3">Contas</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">{t("finances.bills")}</h2>
         <div className="space-y-3">
           {bills.map((bill, index) => (
             <Card key={index} className="shadow-card border-0">
@@ -101,13 +102,13 @@ const FinancasPage = () => {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{bill.name}</p>
-                    <p className="text-sm text-muted-foreground">Vence: {bill.dueDate}</p>
+                    <p className="text-sm text-muted-foreground">{t("finances.due", { date: bill.dueDate })}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-foreground">R$ {bill.amount}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${bill.paid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                    {bill.paid ? 'Pago' : 'Pendente'}
+                    {bill.paid ? t("finances.paid") : t("finances.pending")}
                   </span>
                 </div>
               </CardContent>

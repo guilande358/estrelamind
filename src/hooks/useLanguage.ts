@@ -32,12 +32,13 @@ export const useLanguage = () => {
       if (user) {
         const { data } = await supabase
           .from('profiles')
-          .select('language')
+          .select('*')
           .eq('user_id', user.id)
           .single();
-        if (data?.language && supportedLanguages.includes(data.language as SupportedLanguage)) {
-          await i18n.changeLanguage(data.language);
-          localStorage.setItem('mindflow_language', data.language);
+        const lang = (data as any)?.language;
+        if (lang && supportedLanguages.includes(lang as SupportedLanguage)) {
+          await i18n.changeLanguage(lang);
+          localStorage.setItem('mindflow_language', lang);
         }
       }
     } catch {
