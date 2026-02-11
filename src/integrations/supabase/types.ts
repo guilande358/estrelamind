@@ -105,6 +105,7 @@ export type Database = {
           display_name: string | null
           id: string
           is_premium: boolean | null
+          language: string | null
           mode: string | null
           updated_at: string
           user_id: string
@@ -115,6 +116,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_premium?: boolean | null
+          language?: string | null
           mode?: string | null
           updated_at?: string
           user_id: string
@@ -125,6 +127,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_premium?: boolean | null
+          language?: string | null
           mode?: string | null
           updated_at?: string
           user_id?: string

@@ -2,26 +2,39 @@ import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/hooks/useLanguage";
+import { languageFlags, type SupportedLanguage } from "@/i18n";
+import { useState } from "react";
 
 const PerfilPage = () => {
+  const { t } = useTranslation();
+  const { currentLanguage, setLanguage, supportedLanguages } = useLanguage();
+  const [langDialogOpen, setLangDialogOpen] = useState(false);
+
   const modes = [
-    { id: "profissional", name: "Profissional", icon: Briefcase, active: true },
-    { id: "estudante", name: "Estudante", icon: GraduationCap, active: false },
-    { id: "familia", name: "Família", icon: Users, active: false },
+    { id: "profissional", name: t("profile.modes.professional"), icon: Briefcase, active: true },
+    { id: "estudante", name: t("profile.modes.student"), icon: GraduationCap, active: false },
+    { id: "familia", name: t("profile.modes.family"), icon: Users, active: false },
   ];
 
   const settings = [
-    { name: "Notificações", icon: Bell, type: "toggle", value: true },
-    { name: "Tema escuro", icon: Moon, type: "toggle", value: false },
-    { name: "Privacidade", icon: Shield, type: "link" },
-    { name: "Idioma", icon: Globe, type: "link", subtitle: "Português (BR)" },
+    { name: t("profile.notifications"), icon: Bell, type: "toggle" as const, value: true },
+    { name: t("profile.darkTheme"), icon: Moon, type: "toggle" as const, value: false },
+    { name: t("profile.privacy"), icon: Shield, type: "link" as const },
+    { name: t("profile.language"), icon: Globe, type: "language" as const, subtitle: t(`profile.languages.${currentLanguage}`) },
   ];
+
+  const handleLanguageChange = async (lang: SupportedLanguage) => {
+    await setLanguage(lang);
+    setLangDialogOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-background safe-top">
-      {/* Header */}
       <header className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-semibold text-foreground">Perfil</h1>
+        <h1 className="text-2xl font-semibold text-foreground">{t("profile.title")}</h1>
       </header>
 
       {/* User Profile */}
@@ -37,7 +50,7 @@ const PerfilPage = () => {
                 <p className="text-muted-foreground text-sm">joao@email.com</p>
                 <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary mt-2">
                   <Crown className="w-3 h-3" />
-                  Gratuito
+                  {t("profile.premium")}
                 </span>
               </div>
             </div>
@@ -53,12 +66,12 @@ const PerfilPage = () => {
               <div className="flex items-center gap-3">
                 <Crown className="w-6 h-6 text-white" />
                 <div>
-                  <p className="font-semibold text-white">Upgrade para Premium</p>
-                  <p className="text-sm text-white/80">Automações ilimitadas</p>
+                  <p className="font-semibold text-white">{t("profile.upgradePremium")}</p>
+                  <p className="text-sm text-white/80">{t("profile.unlimitedAutomations")}</p>
                 </div>
               </div>
               <Button size="sm" variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-0">
-                Ver planos
+                {t("profile.viewPlans")}
               </Button>
             </div>
           </CardContent>
@@ -67,7 +80,7 @@ const PerfilPage = () => {
 
       {/* Mode Selection */}
       <section className="px-5 py-4">
-        <h2 className="text-lg font-semibold text-foreground mb-3">Modo</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">{t("profile.mode")}</h2>
         <div className="flex gap-3">
           {modes.map((mode) => {
             const Icon = mode.icon;
@@ -75,9 +88,7 @@ const PerfilPage = () => {
               <Card
                 key={mode.id}
                 className={`flex-1 shadow-card border-2 transition-all cursor-pointer touch-feedback ${
-                  mode.active
-                    ? "border-primary bg-primary/5"
-                    : "border-transparent"
+                  mode.active ? "border-primary bg-primary/5" : "border-transparent"
                 }`}
               >
                 <CardContent className="p-3 text-center">
@@ -98,12 +109,13 @@ const PerfilPage = () => {
 
       {/* Settings */}
       <section className="px-5 py-4">
-        <h2 className="text-lg font-semibold text-foreground mb-3">Configurações</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">{t("profile.settings")}</h2>
         <Card className="shadow-card border-0">
           <CardContent className="p-0 divide-y divide-border">
             {settings.map((setting, index) => {
               const Icon = setting.icon;
-              return (
+              
+              const content = (
                 <div
                   key={index}
                   className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -126,14 +138,42 @@ const PerfilPage = () => {
                   )}
                 </div>
               );
+
+              if (setting.type === "language") {
+                return (
+                  <Dialog key={index} open={langDialogOpen} onOpenChange={setLangDialogOpen}>
+                    <DialogTrigger asChild>{content}</DialogTrigger>
+                    <DialogContent className="sm:max-w-sm">
+                      <DialogHeader>
+                        <DialogTitle>{t("profile.language")}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-2">
+                        {supportedLanguages.map((lang) => (
+                          <button
+                            key={lang}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                              currentLanguage === lang ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                            }`}
+                            onClick={() => handleLanguageChange(lang as SupportedLanguage)}
+                          >
+                            <span className="text-2xl">{languageFlags[lang as SupportedLanguage]}</span>
+                            <span className="font-medium">{t(`profile.languages.${lang}`)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                );
+              }
+
+              return content;
             })}
           </CardContent>
         </Card>
       </section>
 
-      {/* Version */}
       <div className="px-5 py-4 text-center">
-        <p className="text-sm text-muted-foreground">MindFlow v1.0.0</p>
+        <p className="text-sm text-muted-foreground">{t("profile.version")}</p>
       </div>
     </div>
   );

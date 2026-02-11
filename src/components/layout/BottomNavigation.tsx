@@ -1,5 +1,6 @@
 import { Home, Calendar, Wallet, Mic, User } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 interface NavItemProps {
@@ -36,13 +37,14 @@ const NavItem = ({ to, icon, label, isActive }: NavItemProps) => (
 
 const BottomNavigation = () => {
   const location = useLocation();
+  const { t } = useTranslation();
   
   const navItems = [
-    { to: "/home", icon: <Home size={22} />, label: "Home" },
-    { to: "/agenda", icon: <Calendar size={22} />, label: "Agenda" },
-    { to: "/financas", icon: <Wallet size={22} />, label: "Finanças" },
-    { to: "/offload", icon: <Mic size={22} />, label: "Offload" },
-    { to: "/perfil", icon: <User size={22} />, label: "Perfil" },
+    { to: "/home", icon: <Home size={22} />, label: t("nav.home") },
+    { to: "/agenda", icon: <Calendar size={22} />, label: t("nav.agenda") },
+    { to: "/financas", icon: <Wallet size={22} />, label: t("nav.finances") },
+    { to: "/offload", icon: <Mic size={22} />, label: t("nav.offload") },
+    { to: "/perfil", icon: <User size={22} />, label: t("nav.profile") },
   ];
 
   return (
