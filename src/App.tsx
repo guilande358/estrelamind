@@ -3,9 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // Layouts
 import AppLayout from "./components/layout/AppLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
 import OnboardingPage from "./pages/OnboardingPage";
@@ -21,38 +23,36 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Check if user has completed onboarding
-const isOnboarded = () => localStorage.getItem("mindflow_onboarded") === "true";
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Auth Routes */}
-          <Route 
-            path="/" 
-            element={isOnboarded() ? <Navigate to="/home" replace /> : <OnboardingPage />} 
-          />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/mode-select" element={<ModeSelectPage />} />
-          
-          {/* App Routes with Bottom Navigation */}
-          <Route element={<AppLayout />}>
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/agenda" element={<AgendaPage />} />
-            <Route path="/financas" element={<FinancasPage />} />
-            <Route path="/offload" element={<OffloadPage />} />
-            <Route path="/perfil" element={<PerfilPage />} />
-          </Route>
-          
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<OnboardingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/mode-select" element={<ModeSelectPage />} />
+              <Route element={<AppLayout />}>
+                <Route path="/home" element={<HomePage />} />
+                <Route path="/agenda" element={<AgendaPage />} />
+                <Route path="/financas" element={<FinancasPage />} />
+                <Route path="/offload" element={<OffloadPage />} />
+                <Route path="/perfil" element={<PerfilPage />} />
+              </Route>
+            </Route>
+            
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

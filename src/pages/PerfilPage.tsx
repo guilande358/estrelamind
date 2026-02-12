@@ -1,4 +1,4 @@
-import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe } from "lucide-react";
+import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -7,11 +7,23 @@ import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
 import { languageFlags, type SupportedLanguage } from "@/i18n";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const PerfilPage = () => {
   const { t } = useTranslation();
   const { currentLanguage, setLanguage, supportedLanguages } = useLanguage();
   const [langDialogOpen, setLangDialogOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
+  const email = user?.email || "";
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   const modes = [
     { id: "profissional", name: t("profile.modes.professional"), icon: Briefcase, active: true },
@@ -46,8 +58,8 @@ const PerfilPage = () => {
                 <User className="w-8 h-8 text-white" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-foreground">João Silva</h2>
-                <p className="text-muted-foreground text-sm">joao@email.com</p>
+                <h2 className="text-lg font-semibold text-foreground">{displayName}</h2>
+                <p className="text-muted-foreground text-sm">{email}</p>
                 <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary mt-2">
                   <Crown className="w-3 h-3" />
                   {t("profile.premium")}
@@ -171,6 +183,18 @@ const PerfilPage = () => {
           </CardContent>
         </Card>
       </section>
+
+      {/* Logout */}
+      <div className="px-5 py-4">
+        <Button
+          variant="outline"
+          className="w-full h-14 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="w-5 h-5 mr-2" />
+          Sair
+        </Button>
+      </div>
 
       <div className="px-5 py-4 text-center">
         <p className="text-sm text-muted-foreground">{t("profile.version")}</p>
