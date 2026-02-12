@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Eye, EyeOff, Mail, Lock, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -14,16 +16,25 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { user, loading } = useAuth();
+
+  if (!loading && user) {
+    return <Navigate to="/home" replace />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      localStorage.setItem("mindflow_onboarded", "true");
-      navigate("/home");
+    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    setIsLoading(false);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
       toast({ title: t("login.welcomeBack"), description: t("login.loginSuccess") });
-    }, 1000);
+      navigate("/home");
+    }
   };
 
   return (

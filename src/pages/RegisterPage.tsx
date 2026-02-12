@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Eye, EyeOff, Mail, Lock, User, Brain, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const RegisterPage = () => {
   const [name, setName] = useState("");
@@ -15,15 +17,35 @@ const RegisterPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { user, loading } = useAuth();
+
+  if (!loading && user) {
+    return <Navigate to="/home" replace />;
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate("/mode-select");
-      toast({ title: t("register.accountCreated"), description: t("register.welcome") });
-    }, 1000);
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: name },
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    setIsLoading(false);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: t("register.accountCreated"),
+        description: "Verifique seu e-mail para confirmar a conta.",
+      });
+      navigate("/login");
+    }
   };
 
   return (

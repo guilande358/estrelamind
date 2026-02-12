@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const modeKeys = ["professional", "student", "family"] as const;
 const modeIcons = {
@@ -16,11 +18,11 @@ const ModeSelectPage = () => {
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
 
-  const handleContinue = () => {
-    if (selectedMode) {
-      localStorage.setItem("mindflow_mode", selectedMode);
-      localStorage.setItem("mindflow_onboarded", "true");
+  const handleContinue = async () => {
+    if (selectedMode && user) {
+      await supabase.from("profiles").update({ mode: selectedMode }).eq("user_id", user.id);
       navigate("/home");
     }
   };
