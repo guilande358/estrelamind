@@ -1,173 +1,213 @@
 
 
-## Multilingual and Voice System for MindFlow
+## Analise Completa e Plano para Finalizar o MindFlow
 
-This plan adds complete multilingual support (pt-BR, en-US, fr-FR, es-ES), speech recognition, text-to-speech, and AI multilingual processing to MindFlow.
+### Diagnostico: O que esta pronto vs O que falta
 
-### Overview
+**Pronto (30% do app):**
+- Design system e UI de todas as telas (Onboarding, Login, Register, Home, Agenda, Financas, Offload, Perfil)
+- i18next com 4 idiomas (pt-BR, en-US, fr-FR, es-ES)
+- Seletor de idioma no Perfil com persistencia no banco
+- Hooks de Web Speech API (STT e TTS)
+- Edge functions criadas: elevenlabs-tts, elevenlabs-stt, offload-process
+- Banco de dados: tabelas profiles, tasks, events, expenses com RLS
+- ElevenLabs conectado via connector
 
-The implementation covers 5 interconnected layers:
+**Faltando (70% do app) -- Tudo que e necessario para funcionar de verdade:**
 
-1. **i18next** -- All UI text translated across 4 languages
-2. **Language preference** -- Saved in profile, auto-detected on first visit
-3. **Web Speech API** -- Free speech-to-text and text-to-speech (works in Chrome/Edge)
-4. **ElevenLabs** -- Premium high-quality TTS/STT (via connector)
-5. **Lovable AI** -- Multilingual natural language processing (already available)
+---
 
-### Phase 1: i18next Setup and Translation Files
+### Bloco 1: Autenticacao Real (Critico)
 
-**Install** `i18next` and `react-i18next` packages.
+Login e Register sao falsos -- usam `setTimeout` simulando sucesso. Nenhuma chamada ao sistema de autenticacao.
 
-**Create translation files:**
-- `src/i18n/locales/pt-BR.json` -- Portuguese (default)
-- `src/i18n/locales/en-US.json` -- English
-- `src/i18n/locales/fr-FR.json` -- French
-- `src/i18n/locales/es-ES.json` -- Spanish
+**O que fazer:**
+- Integrar `supabase.auth.signUp()` no RegisterPage
+- Integrar `supabase.auth.signInWithPassword()` no LoginPage
+- Criar contexto de autenticacao (`AuthContext`) com estado do usuario
+- Proteger rotas (`/home`, `/agenda`, etc.) com redirect para `/login` se nao autenticado
+- Adicionar logout funcional no PerfilPage
+- Criar perfil automaticamente no registro (trigger `handle_new_user` ja existe)
+- Implementar "Esqueci minha senha" com `supabase.auth.resetPasswordForEmail()`
 
-**Create** `src/i18n/index.ts` -- Initialize i18next with browser language detection, localStorage persistence, and fallback to pt-BR.
+---
 
-**Translate all pages:**
-- OnboardingPage (slides titles, descriptions, buttons)
-- LoginPage / RegisterPage (form labels, buttons, messages)
-- ModeSelectPage (mode names, descriptions, features)
-- HomePage (greetings, section titles, task labels)
-- AgendaPage (month names, day names, event categories)
-- FinancasPage (category names, bill labels, budget text)
-- OffloadPage (placeholders, suggestions, AI hints)
-- PerfilPage (settings names, mode names, version text)
-- BottomNavigation (tab labels)
-- All toast messages
+### Bloco 2: Dados Reais no Dashboard (Home)
 
-**Wrap App** with i18next provider in `main.tsx`.
+HomePage mostra dados hardcoded: "5 tarefas, 2 contas, 3 eventos" e lista fixa.
 
-### Phase 2: Database -- Add Language Column to Profiles
+**O que fazer:**
+- Buscar tarefas do dia do banco (`tasks` onde `due_date = today`)
+- Buscar eventos do dia (`events` onde `start_date = today`)
+- Buscar despesas pendentes (`expenses` onde `paid = false`)
+- Mostrar contadores reais nos cards de stats
+- Lista de tarefas interativa: marcar como concluida via `UPDATE tasks SET completed = true`
+- Sugestao da IA: usar dados reais para gerar insight (ex: "Voce tem 3 contas vencendo esta semana")
 
-**Database migration** to add `language` column to `profiles` table:
+---
 
-```text
-ALTER TABLE profiles ADD COLUMN language text DEFAULT 'pt-BR';
-```
+### Bloco 3: CRUD Completo de Tarefas
 
-This stores the user's language preference persistently.
+Nenhuma operacao de criar/editar/deletar tarefas existe.
 
-### Phase 3: Language Selector in Profile
+**O que fazer:**
+- Criar componente `TaskForm` (modal/sheet) para adicionar tarefa
+- Campos: titulo, descricao, data, hora, prioridade, categoria
+- Botao FAB (+) na HomePage abre o formulario
+- Toggle de completar tarefa no card
+- Swipe ou botao para deletar tarefa
+- Editar tarefa ao clicar no card
 
-**Update PerfilPage:**
-- Replace the static "Idioma" settings item with an interactive language picker
-- Show a dialog/sheet with 4 language options (flags + names)
-- On selection: update i18next language, save to localStorage and profiles table
-- Show current language as subtitle
+---
 
-**Create** `src/hooks/useLanguage.ts` -- Custom hook that:
-- Reads language from profile (database) on login
-- Falls back to `navigator.language` or `pt-BR`
-- Provides `setLanguage()` to update both i18next and database
-- Syncs language across tabs via localStorage
+### Bloco 4: CRUD Completo de Eventos (Agenda)
 
-### Phase 4: Web Speech API (Free Voice)
+AgendaPage mostra eventos hardcoded e nao permite interacao.
 
-**Create** `src/hooks/useSpeechRecognition.ts`:
-- Wraps `webkitSpeechRecognition` / `SpeechRecognition`
-- Sets `recognition.lang` based on current i18next language
-- Returns `{ transcript, isListening, start, stop, isSupported }`
-- Handles interim and final results
-- Graceful fallback message if browser doesn't support it
+**O que fazer:**
+- Buscar eventos reais do banco para o dia selecionado
+- Botao "Novo" funcional: abre formulario de evento
+- Campos: titulo, descricao, data/hora inicio, data/hora fim, categoria, local, lembrete
+- Navegacao entre dias/meses funcional (os botoes ChevronLeft/Right)
+- Calendario mensal completo (nao so 7 dias)
+- Deletar/editar evento
 
-**Create** `src/hooks/useSpeechSynthesis.ts`:
-- Wraps `window.speechSynthesis`
-- Sets `utterance.lang` based on current language
-- Returns `{ speak, stop, isSpeaking, isSupported }`
-- Auto-selects best voice for the language
+---
 
-**Update OffloadPage:**
-- Replace placeholder mic handler with real `useSpeechRecognition`
-- Live transcript display in the listening modal
-- Transcript auto-fills the text input on completion
-- Add "Read aloud" button to AI responses
+### Bloco 5: CRUD Completo de Financas
 
-**Update HomePage:**
-- Add optional "Read aloud" on AI suggestion cards
+FinancasPage mostra categorias e contas hardcoded.
 
-### Phase 5: ElevenLabs Premium Voice (Connector)
+**O que fazer:**
+- Buscar despesas reais do banco
+- Calcular gastos por categoria dinamicamente
+- Botao "Adicionar" funcional: formulario de despesa
+- Campos: titulo, valor, data, categoria, pago/pendente, recorrente
+- Marcar conta como paga
+- Definir orcamento por categoria (nova tabela `budgets` ou coluna)
+- Graficos reais com Recharts (ja instalado, nao usado)
 
-**Connect ElevenLabs** via the connector system (provides `ELEVENLABS_API_KEY`).
+---
 
-**Create edge function** `supabase/functions/elevenlabs-tts/index.ts`:
-- Accepts `{ text, language }` 
-- Selects appropriate voice per language (e.g., Brazilian voice for pt-BR)
-- Returns audio stream
-- Used for premium TTS responses
+### Bloco 6: Fluxo Completo do Offload com IA
 
-**Create edge function** `supabase/functions/elevenlabs-stt/index.ts`:
-- Accepts audio file upload
-- Uses Scribe v2 for batch transcription
-- Auto-detects language or uses user preference
-- Returns transcription text
+O botao "Processar" nao faz nada. A edge function `offload-process` existe mas nao e chamada.
 
-**Update OffloadPage:**
-- Add toggle or auto-detect: use Web Speech API (free) or ElevenLabs (premium)
-- Premium users get ElevenLabs quality; free users get Web Speech API
-- "Read response aloud" uses ElevenLabs TTS for premium, Web Speech for free
+**O que fazer:**
+- Conectar botao "Processar" a edge function `offload-process`
+- Mostrar loading/estado de processamento
+- Exibir cards de confirmacao com itens extraidos pela IA (tarefa, evento, despesa, lembrete)
+- Botao "Confirmar" salva os itens no banco de dados
+- Botao "Editar" permite ajustar antes de salvar
+- Integrar TTS: ler resposta da IA em voz alta (Web Speech gratuito ou ElevenLabs premium)
+- Fluxo voice-in/voice-out completo: falar -> transcrever -> processar -> mostrar -> ler resposta
 
-### Phase 6: Multilingual AI Processing
+---
 
-**Create edge function** `supabase/functions/offload-process/index.ts`:
-- Uses Lovable AI (Gemini Flash) to interpret user text
-- System prompt includes: "Respond in the user's language: {language}"
-- Uses tool calling to extract structured output (task/event/expense/reminder)
-- Returns structured data for confirmation
+### Bloco 7: Integracao ElevenLabs Premium no Frontend
 
-**Update OffloadPage:**
-- On "Processar" button click, send text + language to `offload-process`
-- Show confirmation card with extracted items (task, event, expense, reminder)
-- User confirms or edits before saving to database
-- AI response spoken aloud (optional, via TTS)
+Edge functions de TTS e STT existem mas nao sao chamadas pelo app.
 
-### Phase 7: Real-time Voice Assistant Flow
+**O que fazer:**
+- Criar hook `useElevenLabs` que chama as edge functions
+- Adicionar toggle no Perfil: "Qualidade de voz" (Padrao/Premium)
+- No Offload: se premium, usar ElevenLabs STT em vez de Web Speech API
+- Nas respostas da IA: usar ElevenLabs TTS para audio de alta qualidade
+- Verificar `is_premium` do perfil para decidir qual servico usar
 
-**Update OffloadPage listening modal:**
-- Show live transcript as user speaks
-- Auto-send to AI when user stops speaking (VAD)
-- Show AI response text with typing animation
-- Auto-speak response (if enabled in settings)
-- Full voice-in, voice-out loop
+---
 
-**Add to PerfilPage settings:**
-- "Auto-read responses" toggle
-- "Voice quality" selector (Standard / Premium)
-- "Voice language" shows current language
+### Bloco 8: Perfil Real e Configuracoes Funcionais
 
-### Technical Details
+PerfilPage mostra "Joao Silva" hardcoded. Switches nao funcionam.
 
-**New dependencies:**
-- `i18next` + `react-i18next` + `i18next-browser-languagedetector`
+**O que fazer:**
+- Carregar dados reais do perfil (nome, email, avatar)
+- Editar nome e avatar
+- Dark mode funcional com `next-themes` (ja instalado)
+- Notificacoes toggle funcional (Web Push Notifications ou permissao)
+- Selecao de modo (profissional/estudante/familia) salva no banco
+- Botao de logout
+- Toggle "Ler respostas automaticamente" para TTS
+- Toggle "Qualidade de voz" (Padrao/Premium)
 
-**New files:**
-- `src/i18n/index.ts` -- i18next configuration
-- `src/i18n/locales/pt-BR.json` -- ~150 translation keys
-- `src/i18n/locales/en-US.json`
-- `src/i18n/locales/fr-FR.json`
-- `src/i18n/locales/es-ES.json`
-- `src/hooks/useLanguage.ts` -- Language management hook
-- `src/hooks/useSpeechRecognition.ts` -- Web Speech API STT hook
-- `src/hooks/useSpeechSynthesis.ts` -- Web Speech API TTS hook
-- `supabase/functions/offload-process/index.ts` -- AI text processing
-- `supabase/functions/elevenlabs-tts/index.ts` -- Premium TTS
-- `supabase/functions/elevenlabs-stt/index.ts` -- Premium STT
+---
 
-**Modified files:**
-- `src/main.tsx` -- Add i18next provider
-- `src/App.tsx` -- Language context
-- All page files -- Replace hardcoded text with `t()` calls
-- `src/components/layout/BottomNavigation.tsx` -- Translated labels
-- `supabase/config.toml` -- Add edge function configs
+### Bloco 9: Protecao de Rotas e Navegacao
 
-**Database changes:**
-- Add `language` column to `profiles` table (default: `pt-BR`)
+Qualquer pessoa acessa `/home` sem login. O botao (+) nao funciona.
 
-**ElevenLabs voice mapping:**
-- pt-BR: Brazilian Portuguese voice
-- en-US: American English voice  
-- fr-FR: French voice
-- es-ES: Spanish voice
+**O que fazer:**
+- Componente `ProtectedRoute` que verifica sessao
+- Redirect automatico para `/login` se nao autenticado
+- Redirect automatico para `/home` se ja autenticado (nas rotas de auth)
+- FAB (+) com menu de opcoes: Nova Tarefa, Novo Evento, Nova Despesa, Offload Rapido
+
+---
+
+### Bloco 10: PWA e Experiencia Mobile
+
+`vite-plugin-pwa` esta instalado mas nao configurado.
+
+**O que fazer:**
+- Configurar service worker no `vite.config.ts`
+- Criar `manifest.json` com icones e cores do MindFlow
+- Splash screen
+- Instalar prompt ("Adicionar a tela inicial")
+- Cache de assets para uso offline
+
+---
+
+### Ordem de Implementacao Recomendada
+
+A implementacao deve seguir esta sequencia para evitar dependencias quebradas:
+
+1. **Autenticacao** (Bloco 1) -- base para tudo
+2. **Protecao de rotas** (Bloco 9) -- seguranca
+3. **Perfil real** (Bloco 8) -- dados do usuario
+4. **CRUD Tarefas** (Bloco 3) -- funcionalidade core
+5. **CRUD Eventos** (Bloco 4) -- funcionalidade core
+6. **CRUD Financas** (Bloco 5) -- funcionalidade core
+7. **Dashboard real** (Bloco 2) -- depende dos CRUDs
+8. **Offload com IA** (Bloco 6) -- fluxo principal do app
+9. **ElevenLabs premium** (Bloco 7) -- upgrade de voz
+10. **PWA** (Bloco 10) -- polimento final
+
+---
+
+### Detalhes Tecnicos
+
+**Novos arquivos a criar:**
+- `src/contexts/AuthContext.tsx` -- contexto de autenticacao
+- `src/components/ProtectedRoute.tsx` -- guarda de rotas
+- `src/components/tasks/TaskForm.tsx` -- formulario de tarefa
+- `src/components/tasks/TaskCard.tsx` -- card interativo de tarefa
+- `src/components/events/EventForm.tsx` -- formulario de evento
+- `src/components/expenses/ExpenseForm.tsx` -- formulario de despesa
+- `src/components/offload/ConfirmationCard.tsx` -- card de confirmacao IA
+- `src/components/offload/AIResponseCard.tsx` -- resposta da IA
+- `src/components/shared/QuickAddMenu.tsx` -- menu do FAB (+)
+- `src/hooks/useTasks.ts` -- hook de CRUD tarefas
+- `src/hooks/useEvents.ts` -- hook de CRUD eventos
+- `src/hooks/useExpenses.ts` -- hook de CRUD despesas
+- `src/hooks/useProfile.ts` -- hook de perfil
+- `src/hooks/useElevenLabs.ts` -- hook de voz premium
+
+**Arquivos a modificar:**
+- `src/App.tsx` -- AuthProvider + ProtectedRoute
+- `src/pages/LoginPage.tsx` -- auth real
+- `src/pages/RegisterPage.tsx` -- auth real
+- `src/pages/HomePage.tsx` -- dados reais + CRUD
+- `src/pages/AgendaPage.tsx` -- dados reais + CRUD
+- `src/pages/FinancasPage.tsx` -- dados reais + CRUD
+- `src/pages/OffloadPage.tsx` -- fluxo IA completo
+- `src/pages/PerfilPage.tsx` -- dados reais + configuracoes
+- `src/components/layout/AppLayout.tsx` -- protecao
+- `vite.config.ts` -- PWA config
+
+**Migracao de banco necessaria:**
+- Tabela `budgets` (orcamento por categoria) -- opcional, pode ser coluna em expenses
+- Nenhuma outra alteracao de schema necessaria, as tabelas existentes cobrem tudo
+
+**Nenhuma dependencia nova necessaria** -- tudo ja esta instalado (recharts, next-themes, react-hook-form, zod, vite-plugin-pwa).
 
