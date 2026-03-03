@@ -1,4 +1,4 @@
-import { Mic, Send, Sparkles, CheckCircle2, Calendar, CreditCard, Bell, Volume2 } from "lucide-react";
+import { Mic, Send, Sparkles, CheckCircle2, Calendar, CreditCard, Bell, Volume2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,14 +6,33 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { useElevenLabs } from "@/hooks/useElevenLabs";
+import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTasks } from "@/hooks/useTasks";
+import { useEvents } from "@/hooks/useEvents";
+import { useExpenses } from "@/hooks/useExpenses";
+import { supabase } from "@/integrations/supabase/client";
+import ConfirmationCard, { type AIItem } from "@/components/offload/ConfirmationCard";
 
 const OffloadPage = () => {
   const [input, setInput] = useState("");
-  const { t } = useTranslation();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [aiResult, setAiResult] = useState<{ items: AIItem[]; response: string } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const speech = useSpeechRecognition();
   const tts = useSpeechSynthesis();
+  const elevenLabs = useElevenLabs();
+  const { data: profile } = useProfile();
+  const { createTask } = useTasks();
+  const { createEvent } = useEvents();
+  const { createExpense } = useExpenses();
+
+  const isPremium = profile?.is_premium;
 
   const suggestions = [
     { icon: Bell, text: t("offload.suggestions.reminder"), type: t("offload.types.reminder") },
@@ -22,6 +41,88 @@ const OffloadPage = () => {
     { icon: CreditCard, text: t("offload.suggestions.expense"), type: t("offload.types.expense") },
   ];
 
+  const speakResponse = (text: string) => {
+    if (isPremium) {
+      elevenLabs.speak(text);
+    } else {
+      tts.speak(text);
+    }
+  };
+
+  const handleProcess = async () => {
+    if (!input.trim()) return;
+    setIsProcessing(true);
+    setAiResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("offload-process", {
+        body: { text: input.trim(), language: i18n.language },
+      });
+
+      if (error) throw error;
+
+      if (data?.items?.length > 0) {
+        setAiResult(data);
+        speakResponse(data.response || "Pronto!");
+      } else {
+        toast({ title: data?.response || "Nenhum item identificado", variant: "destructive" });
+      }
+    } catch (e) {
+      console.error("Offload process error:", e);
+      toast({ title: "Erro ao processar", description: "Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!aiResult?.items?.length || !user) return;
+    setIsSaving(true);
+
+    try {
+      for (const item of aiResult.items) {
+        if (item.type === "task" || item.type === "reminder") {
+          await createTask.mutateAsync({
+            title: item.title,
+            due_date: item.date || null,
+            due_time: item.time || null,
+            priority: item.priority || "medium",
+            category: item.category || "geral",
+          });
+        } else if (item.type === "event") {
+          const startDate = item.date
+            ? `${item.date}T${item.time || "09:00"}:00`
+            : new Date().toISOString();
+          await createEvent.mutateAsync({
+            title: item.title,
+            start_date: startDate,
+            category: item.category || "geral",
+          });
+        } else if (item.type === "expense") {
+          await createExpense.mutateAsync({
+            title: item.title,
+            amount: item.amount || 0,
+            expense_date: item.date || new Date().toISOString().split("T")[0],
+            category: item.category || "outros",
+          });
+        }
+      }
+
+      toast({ title: "Itens criados com sucesso! ✅" });
+      setAiResult(null);
+      setInput("");
+    } catch (e) {
+      console.error("Save error:", e);
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDismiss = () => {
+    setAiResult(null);
+  };
+
   const handleMicClick = () => {
     if (!speech.isSupported) {
       toast({ title: t("offload.speechNotSupported"), variant: "destructive" });
@@ -29,9 +130,8 @@ const OffloadPage = () => {
     }
     if (speech.isListening) {
       speech.stop();
-      // Fill input with transcript
-      const finalText = (speech.transcript + ' ' + speech.interimTranscript).trim();
-      if (finalText) setInput(prev => prev ? prev + ' ' + finalText : finalText);
+      const finalText = (speech.transcript + " " + speech.interimTranscript).trim();
+      if (finalText) setInput((prev) => (prev ? prev + " " + finalText : finalText));
       speech.reset();
     } else {
       speech.reset();
@@ -41,8 +141,8 @@ const OffloadPage = () => {
 
   const handleStopListening = () => {
     speech.stop();
-    const finalText = (speech.transcript + ' ' + speech.interimTranscript).trim();
-    if (finalText) setInput(prev => prev ? prev + ' ' + finalText : finalText);
+    const finalText = (speech.transcript + " " + speech.interimTranscript).trim();
+    if (finalText) setInput((prev) => (prev ? prev + " " + finalText : finalText));
     speech.reset();
   };
 
@@ -75,8 +175,17 @@ const OffloadPage = () => {
               >
                 <Mic className="w-5 h-5" />
               </Button>
-              <Button size="sm" disabled={!input.trim()} className="gradient-calm text-white border-0">
-                <Send className="w-4 h-4 mr-2" />
+              <Button
+                size="sm"
+                disabled={!input.trim() || isProcessing}
+                className="gradient-calm text-white border-0"
+                onClick={handleProcess}
+              >
+                {isProcessing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
                 {t("offload.process")}
               </Button>
             </div>
@@ -84,50 +193,70 @@ const OffloadPage = () => {
         </Card>
       </div>
 
-      <div className="px-5 py-2">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm">{t("offload.aiHint")}</span>
+      {/* AI Result */}
+      {aiResult && (
+        <div className="px-5 py-2">
+          <ConfirmationCard
+            items={aiResult.items}
+            response={aiResult.response}
+            onConfirm={handleConfirm}
+            onDismiss={handleDismiss}
+            isLoading={isSaving}
+          />
         </div>
-      </div>
+      )}
 
-      <section className="px-5 py-4">
-        <h2 className="text-lg font-semibold text-foreground mb-3">{t("offload.trySaying")}</h2>
-        <div className="space-y-3">
-          {suggestions.map((suggestion, index) => {
-            const Icon = suggestion.icon;
-            return (
-              <Card
-                key={index}
-                className="shadow-card border-0 cursor-pointer hover:shadow-soft transition-all duration-200 touch-feedback"
-                onClick={() => setInput(suggestion.text)}
-              >
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-foreground">{suggestion.text}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {t("offload.createType", { type: suggestion.type })}
-                    </p>
-                  </div>
-                  {tts.isSupported && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-primary"
-                      onClick={(e) => { e.stopPropagation(); tts.speak(suggestion.text); }}
-                    >
-                      <Volume2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
+      {!aiResult && (
+        <>
+          <div className="px-5 py-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm">{t("offload.aiHint")}</span>
+            </div>
+          </div>
+
+          <section className="px-5 py-4">
+            <h2 className="text-lg font-semibold text-foreground mb-3">{t("offload.trySaying")}</h2>
+            <div className="space-y-3">
+              {suggestions.map((suggestion, index) => {
+                const Icon = suggestion.icon;
+                return (
+                  <Card
+                    key={index}
+                    className="shadow-card border-0 cursor-pointer hover:shadow-soft transition-all duration-200 touch-feedback"
+                    onClick={() => setInput(suggestion.text)}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-foreground">{suggestion.text}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {t("offload.createType", { type: suggestion.type })}
+                        </p>
+                      </div>
+                      {tts.isSupported && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            tts.speak(suggestion.text);
+                          }}
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Voice Listening Modal */}
       {speech.isListening && (
@@ -137,7 +266,6 @@ const OffloadPage = () => {
           </div>
           <p className="text-xl font-medium text-foreground mt-6">{t("offload.listening")}</p>
           <p className="text-muted-foreground mt-2">{t("offload.speakMind")}</p>
-          {/* Live transcript */}
           {(speech.transcript || speech.interimTranscript) && (
             <div className="mt-4 max-w-xs text-center px-4">
               <p className="text-foreground">{speech.transcript}</p>
