@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 // Layouts
 import AppLayout from "./components/layout/AppLayout";
@@ -19,6 +20,7 @@ import AgendaPage from "./pages/AgendaPage";
 import FinancasPage from "./pages/FinancasPage";
 import OffloadPage from "./pages/OffloadPage";
 import PerfilPage from "./pages/PerfilPage";
+import PremiumPage from "./pages/PremiumPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,33 +28,36 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<OnboardingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/mode-select" element={<ModeSelectPage />} />
-              <Route element={<AppLayout />}>
-                <Route path="/home" element={<HomePage />} />
-                <Route path="/agenda" element={<AgendaPage />} />
-                <Route path="/financas" element={<FinancasPage />} />
-                <Route path="/offload" element={<OffloadPage />} />
-                <Route path="/perfil" element={<PerfilPage />} />
+      <ThemeProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<OnboardingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              
+              {/* Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/mode-select" element={<ModeSelectPage />} />
+                <Route path="/premium" element={<PremiumPage />} />
+                <Route element={<AppLayout />}>
+                  <Route path="/home" element={<HomePage />} />
+                  <Route path="/agenda" element={<AgendaPage />} />
+                  <Route path="/financas" element={<FinancasPage />} />
+                  <Route path="/offload" element={<OffloadPage />} />
+                  <Route path="/perfil" element={<PerfilPage />} />
+                </Route>
               </Route>
-            </Route>
-            
-            {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+              
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
