@@ -1,4 +1,4 @@
-import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe, LogOut } from "lucide-react";
+import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe, LogOut, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -8,6 +8,8 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { languageFlags, type SupportedLanguage } from "@/i18n";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
 
 const PerfilPage = () => {
@@ -15,27 +17,28 @@ const PerfilPage = () => {
   const { currentLanguage, setLanguage, supportedLanguages } = useLanguage();
   const [langDialogOpen, setLangDialogOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { data: profile, updateProfile } = useProfile();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
+  const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
   const email = user?.email || "";
+  const isPremium = profile?.is_premium;
+  const currentMode = profile?.mode || "profissional";
 
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
   };
 
-  const modes = [
-    { id: "profissional", name: t("profile.modes.professional"), icon: Briefcase, active: true },
-    { id: "estudante", name: t("profile.modes.student"), icon: GraduationCap, active: false },
-    { id: "familia", name: t("profile.modes.family"), icon: Users, active: false },
-  ];
+  const handleModeChange = (modeId: string) => {
+    updateProfile.mutate({ mode: modeId });
+  };
 
-  const settings = [
-    { name: t("profile.notifications"), icon: Bell, type: "toggle" as const, value: true },
-    { name: t("profile.darkTheme"), icon: Moon, type: "toggle" as const, value: false },
-    { name: t("profile.privacy"), icon: Shield, type: "link" as const },
-    { name: t("profile.language"), icon: Globe, type: "language" as const, subtitle: t(`profile.languages.${currentLanguage}`) },
+  const modes = [
+    { id: "profissional", name: t("profile.modes.professional"), icon: Briefcase },
+    { id: "estudante", name: t("profile.modes.student"), icon: GraduationCap },
+    { id: "familia", name: t("profile.modes.family"), icon: Users },
   ];
 
   const handleLanguageChange = async (lang: SupportedLanguage) => {
@@ -60,9 +63,11 @@ const PerfilPage = () => {
               <div className="flex-1">
                 <h2 className="text-lg font-semibold text-foreground">{displayName}</h2>
                 <p className="text-muted-foreground text-sm">{email}</p>
-                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary mt-2">
+                <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full mt-2 ${
+                  isPremium ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                }`}>
                   <Crown className="w-3 h-3" />
-                  {t("profile.premium")}
+                  {isPremium ? "Premium" : t("profile.premium")}
                 </span>
               </div>
             </div>
@@ -71,24 +76,29 @@ const PerfilPage = () => {
       </div>
 
       {/* Premium Banner */}
-      <div className="px-5 py-2">
-        <Card className="shadow-soft border-0 gradient-calm overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Crown className="w-6 h-6 text-white" />
-                <div>
-                  <p className="font-semibold text-white">{t("profile.upgradePremium")}</p>
-                  <p className="text-sm text-white/80">{t("profile.unlimitedAutomations")}</p>
+      {!isPremium && (
+        <div className="px-5 py-2">
+          <Card
+            className="shadow-soft border-0 gradient-calm overflow-hidden cursor-pointer"
+            onClick={() => navigate("/premium")}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-6 h-6 text-white" />
+                  <div>
+                    <p className="font-semibold text-white">{t("profile.upgradePremium")}</p>
+                    <p className="text-sm text-white/80">{t("profile.unlimitedAutomations")}</p>
+                  </div>
                 </div>
+                <Button size="sm" variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-0">
+                  {t("profile.viewPlans")}
+                </Button>
               </div>
-              <Button size="sm" variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-0">
-                {t("profile.viewPlans")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Mode Selection */}
       <section className="px-5 py-4">
@@ -96,20 +106,22 @@ const PerfilPage = () => {
         <div className="flex gap-3">
           {modes.map((mode) => {
             const Icon = mode.icon;
+            const isActive = currentMode === mode.id;
             return (
               <Card
                 key={mode.id}
                 className={`flex-1 shadow-card border-2 transition-all cursor-pointer touch-feedback ${
-                  mode.active ? "border-primary bg-primary/5" : "border-transparent"
+                  isActive ? "border-primary bg-primary/5" : "border-transparent"
                 }`}
+                onClick={() => handleModeChange(mode.id)}
               >
                 <CardContent className="p-3 text-center">
                   <div className={`w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center ${
-                    mode.active ? "bg-primary/10" : "bg-muted"
+                    isActive ? "bg-primary/10" : "bg-muted"
                   }`}>
-                    <Icon className={`w-5 h-5 ${mode.active ? "text-primary" : "text-muted-foreground"}`} />
+                    <Icon className={`w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                   </div>
-                  <p className={`text-sm font-medium ${mode.active ? "text-primary" : "text-muted-foreground"}`}>
+                  <p className={`text-sm font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                     {mode.name}
                   </p>
                 </CardContent>
@@ -124,62 +136,95 @@ const PerfilPage = () => {
         <h2 className="text-lg font-semibold text-foreground mb-3">{t("profile.settings")}</h2>
         <Card className="shadow-card border-0">
           <CardContent className="p-0 divide-y divide-border">
-            {settings.map((setting, index) => {
-              const Icon = setting.icon;
-              
-              const content = (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                >
+            {/* Dark Mode */}
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                  <Moon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-foreground">{t("profile.darkTheme")}</p>
+              </div>
+              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+            </div>
+
+            {/* Notifications */}
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-foreground">{t("profile.notifications")}</p>
+              </div>
+              <Switch defaultChecked />
+            </div>
+
+            {/* Voice Quality */}
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                  <Volume2 className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{t("profile.voiceQuality")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isPremium ? t("profile.voicePremium") : t("profile.voiceStandard")}
+                  </p>
+                </div>
+              </div>
+              {isPremium ? (
+                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">ElevenLabs</span>
+              ) : (
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              )}
+            </div>
+
+            {/* Language */}
+            <Dialog open={langDialogOpen} onOpenChange={setLangDialogOpen}>
+              <DialogTrigger asChild>
+                <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-muted-foreground" />
+                      <Globe className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{setting.name}</p>
-                      {setting.subtitle && (
-                        <p className="text-sm text-muted-foreground">{setting.subtitle}</p>
-                      )}
+                      <p className="font-medium text-foreground">{t("profile.language")}</p>
+                      <p className="text-sm text-muted-foreground">{t(`profile.languages.${currentLanguage}`)}</p>
                     </div>
                   </div>
-                  {setting.type === "toggle" ? (
-                    <Switch defaultChecked={setting.value} />
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  )}
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>
-              );
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>{t("profile.language")}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {supportedLanguages.map((lang) => (
+                    <button
+                      key={lang}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                        currentLanguage === lang ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      }`}
+                      onClick={() => handleLanguageChange(lang as SupportedLanguage)}
+                    >
+                      <span className="text-2xl">{languageFlags[lang as SupportedLanguage]}</span>
+                      <span className="font-medium">{t(`profile.languages.${lang}`)}</span>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
 
-              if (setting.type === "language") {
-                return (
-                  <Dialog key={index} open={langDialogOpen} onOpenChange={setLangDialogOpen}>
-                    <DialogTrigger asChild>{content}</DialogTrigger>
-                    <DialogContent className="sm:max-w-sm">
-                      <DialogHeader>
-                        <DialogTitle>{t("profile.language")}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-2">
-                        {supportedLanguages.map((lang) => (
-                          <button
-                            key={lang}
-                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
-                              currentLanguage === lang ? "bg-primary/10 text-primary" : "hover:bg-muted"
-                            }`}
-                            onClick={() => handleLanguageChange(lang as SupportedLanguage)}
-                          >
-                            <span className="text-2xl">{languageFlags[lang as SupportedLanguage]}</span>
-                            <span className="font-medium">{t(`profile.languages.${lang}`)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                );
-              }
-
-              return content;
-            })}
+            {/* Privacy */}
+            <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-foreground">{t("profile.privacy")}</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
           </CardContent>
         </Card>
       </section>
