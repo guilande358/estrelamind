@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 
-const PADDLE_TOKEN = import.meta.env.VITE_PADDLE_CLIENT_TOKEN || "";
-const PADDLE_ENV = (import.meta.env.VITE_PADDLE_ENV || "sandbox") as "sandbox" | "production";
+const PADDLE_TOKEN = "live_e60c295432d15f2b8e061d1872b";
+const PADDLE_ENV = "production" as "sandbox" | "production";
 
 export const usePaddle = (): Paddle | undefined => {
   const [paddle, setPaddle] = useState<Paddle>();

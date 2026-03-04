@@ -7,8 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 
-const PREMIUM_MONTHLY_PRICE_ID = import.meta.env.VITE_PADDLE_MONTHLY_PRICE_ID || "";
-const PREMIUM_YEARLY_PRICE_ID = import.meta.env.VITE_PADDLE_YEARLY_PRICE_ID || "";
+const PREMIUM_MONTHLY_PRICE_ID = "pri_01kjt54b506e1mgs7k17xey4mv";
+const PREMIUM_YEARLY_PRICE_ID = "pri_01kjt4zkpq67hspzfke0bdearz";
 
 const PremiumPage = () => {
   const { t } = useTranslation();
