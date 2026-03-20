@@ -187,5 +187,33 @@
         "features": ["Agenda compartilhada", "Despesas familiares", "Tarefas de casa"]
       }
     }
+  },
+  "premium": {
+    "title": "Premium",
+    "headline": "Desbloqueie seu potencial máximo!",
+    "feature1": "IA ilimitada (offload mental, sugestões inteligentes)",
+    "feature2": "Voz completa (fale e o app entende)",
+    "feature3": "Export PDF/CSV de tarefas e finanças",
+    "feature4": "Suporte prioritário + atualizações exclusivas",
+    "yearly": "Anual",
+    "monthly": "Mensal",
+    "yearlyPrice": "US$ 39,99",
+    "monthlyPrice": "US$ 4,99",
+    "yearlySave": "Economize 33%",
+    "yearlyEquiv": "≈ US$ 3,33/mês",
+    "yearlyLocal": "≈ 2.400 MZN",
+    "monthlyLocal": "≈ 300 MZN",
+    "monthlyCancel": "Cancele quando quiser",
+    "yearlyTrial": "7 dias de teste GRÁTIS",
+    "monthlyTrial": "14 dias de teste GRÁTIS",
+    "trialSub": "sem cartão agora, sem compromisso",
+    "securePayment": "Pagamento seguro processado pelo Paddle. Cancelamento a qualquer momento, sem multa.",
+    "cta": "Assine agora e transforme sua produtividade! 🚀",
+    "bestValue": "Melhor valor",
+    "isPremiumTitle": "Você é Premium! 🎉",
+    "isPremiumSub": "Aproveite todos os recursos exclusivos.",
+    "backToProfile": "Voltar ao perfil",
+    "perMonth": "/mês",
+    "perYear": "/ano"
   }
 }

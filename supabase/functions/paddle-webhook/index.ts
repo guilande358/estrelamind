@@ -27,11 +27,10 @@ serve(async (req) => {
       eventType === 'subscription.updated'
     ) {
       const customerEmail = data.customer?.email;
-      const status = data.status; // active, canceled, past_due, etc.
+      const status = data.status;
       const isPremium = status === 'active' || status === 'trialing';
 
       if (customerEmail) {
-        // Find user by email
         const { data: authUsers } = await supabase.auth.admin.listUsers();
         const user = authUsers?.users?.find((u: any) => u.email === customerEmail);
 
