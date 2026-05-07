@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 
-const PREMIUM_MONTHLY_PRICE_ID = "pri_01kjt54b506e1mgs7k17xey4mv";
-const PREMIUM_YEARLY_PRICE_ID = "pri_01kjt4zkpq67hspzfke0bdearz";
+// Paddle Price IDs (production) — confirmed in Paddle dashboard
+const PREMIUM_YEARLY_PRICE_ID = "pri_01kjt54b506e1mgs7k17xey4mv"; // $40/year, 7-day trial
+const PREMIUM_MONTHLY_PRICE_ID = "pri_01kjt4zkpq67hspzfke0bdearz"; // $4.99/month, 14-day trial
 
 const PremiumPage = () => {
   const { t } = useTranslation();
@@ -21,14 +22,29 @@ const PremiumPage = () => {
   const isPremium = profile?.is_premium;
 
   const openCheckout = (priceId: string) => {
-    if (!paddle || !priceId) return;
-    paddle.Checkout.open({
-      items: [{ priceId, quantity: 1 }],
-      customer: user?.email ? { email: user.email } : undefined,
-      settings: {
-        successUrl: `${window.location.origin}/perfil?upgraded=true`,
-      },
-    });
+    if (!priceId) {
+      console.error("[Paddle] Missing priceId");
+      return;
+    }
+    if (!paddle) {
+      console.warn("[Paddle] Not initialized yet, please wait...");
+      return;
+    }
+    try {
+      console.log("[Paddle] Opening checkout for", priceId);
+      paddle.Checkout.open({
+        items: [{ priceId, quantity: 1 }],
+        customer: user?.email ? { email: user.email } : undefined,
+        settings: {
+          displayMode: "overlay",
+          theme: "light",
+          locale: "en",
+          successUrl: `${window.location.origin}/perfil?upgraded=true`,
+        },
+      });
+    } catch (err) {
+      console.error("[Paddle] Checkout open failed:", err);
+    }
   };
 
   const features = [
