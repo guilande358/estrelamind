@@ -22,14 +22,29 @@ const PremiumPage = () => {
   const isPremium = profile?.is_premium;
 
   const openCheckout = (priceId: string) => {
-    if (!paddle || !priceId) return;
-    paddle.Checkout.open({
-      items: [{ priceId, quantity: 1 }],
-      customer: user?.email ? { email: user.email } : undefined,
-      settings: {
-        successUrl: `${window.location.origin}/perfil?upgraded=true`,
-      },
-    });
+    if (!priceId) {
+      console.error("[Paddle] Missing priceId");
+      return;
+    }
+    if (!paddle) {
+      console.warn("[Paddle] Not initialized yet, please wait...");
+      return;
+    }
+    try {
+      console.log("[Paddle] Opening checkout for", priceId);
+      paddle.Checkout.open({
+        items: [{ priceId, quantity: 1 }],
+        customer: user?.email ? { email: user.email } : undefined,
+        settings: {
+          displayMode: "overlay",
+          theme: "light",
+          locale: "en",
+          successUrl: `${window.location.origin}/perfil?upgraded=true`,
+        },
+      });
+    } catch (err) {
+      console.error("[Paddle] Checkout open failed:", err);
+    }
   };
 
   const features = [
