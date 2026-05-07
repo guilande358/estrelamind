@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 
-const PREMIUM_MONTHLY_PRICE_ID = "pri_01kjt54b506e1mgs7k17xey4mv";
-const PREMIUM_YEARLY_PRICE_ID = "pri_01kjt4zkpq67hspzfke0bdearz";
+// Paddle Price IDs (production) — confirmed in Paddle dashboard
+const PREMIUM_YEARLY_PRICE_ID = "pri_01kjt54b506e1mgs7k17xey4mv"; // $40/year, 7-day trial
+const PREMIUM_MONTHLY_PRICE_ID = "pri_01kjt4zkpq67hspzfke0bdearz"; // $4.99/month, 14-day trial
 
 const PremiumPage = () => {
   const { t } = useTranslation();
