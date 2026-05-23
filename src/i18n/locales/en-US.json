@@ -77,7 +77,23 @@
       "task": "task",
       "expense": "expense"
     },
-    "speechNotSupported": "Your browser does not support speech recognition."
+    "speechNotSupported": "Your browser does not support speech recognition.",
+    "done": "Done",
+    "sayDone": "Say \"done\" anytime to stop",
+    "fabLabel": "Talk to AI",
+    "chatTitle": "AI Conversation",
+    "chatSubtitle": "Speak, ask and create by voice",
+    "chatPlaceholder": "Type or tap the microphone…",
+    "emptyTitle": "All clear here",
+    "emptyHint": "Tap the microphone in the bottom bar and speak freely. Say \"create it\" to save automatically.",
+    "thinking": "Thinking…",
+    "autoCreated": "{{count}} item created automatically",
+    "autoCreated_plural": "{{count}} items created automatically",
+    "errorProcess": "Failed to process. Try again.",
+    "mute": "Mute voice",
+    "unmute": "Unmute voice",
+    "readUnread": "Read unread",
+    "noUnread": "No new messages"
   },
   "profile": {
     "title": "Profile",
