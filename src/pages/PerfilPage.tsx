@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
 import { languageFlags, type SupportedLanguage } from "@/i18n";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -20,6 +21,31 @@ const PerfilPage = () => {
   const { data: profile, updateProfile } = useProfile();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [notifEnabled, setNotifEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("mf_notifications") === "1";
+  });
+
+  useEffect(() => {
+    if (notifEnabled && typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [notifEnabled]);
+
+  const handleNotifToggle = async (checked: boolean) => {
+    if (checked && typeof Notification !== "undefined") {
+      const perm = Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
+      if (perm !== "granted") {
+        toast({ title: t("profile.notifBlocked") || "Permissão negada", variant: "destructive" });
+        return;
+      }
+    }
+    setNotifEnabled(checked);
+    localStorage.setItem("mf_notifications", checked ? "1" : "0");
+  };
 
   const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
   const email = user?.email || "";
@@ -155,7 +181,7 @@ const PerfilPage = () => {
                 </div>
                 <p className="font-medium text-foreground">{t("profile.notifications")}</p>
               </div>
-              <Switch defaultChecked />
+              <Switch checked={notifEnabled} onCheckedChange={handleNotifToggle} />
             </div>
 
             {/* Voice Quality */}

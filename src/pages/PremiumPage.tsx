@@ -7,27 +7,39 @@ import { usePaddle } from "@/hooks/usePaddle";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 // Paddle Price IDs (production) — confirmed in Paddle dashboard
 const PREMIUM_YEARLY_PRICE_ID = "pri_01kjt54b506e1mgs7k17xey4mv"; // $40/year, 7-day trial
 const PREMIUM_MONTHLY_PRICE_ID = "pri_01kjt4zkpq67hspzfke0bdearz"; // $4.99/month, 14-day trial
 
+const localeMap: Record<string, string> = {
+  "pt-BR": "pt",
+  "en-US": "en",
+  "fr-FR": "fr",
+  "es-ES": "es",
+};
+
 const PremiumPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const paddle = usePaddle();
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const isPremium = profile?.is_premium;
 
   const openCheckout = (priceId: string) => {
     if (!priceId) {
-      console.error("[Paddle] Missing priceId");
+      toast({ title: "Plano indisponível", variant: "destructive" });
       return;
     }
     if (!paddle) {
-      console.warn("[Paddle] Not initialized yet, please wait...");
+      toast({
+        title: t("premium.loading") || "Carregando pagamento…",
+        description: "Aguarde alguns segundos e tente novamente.",
+      });
       return;
     }
     try {
@@ -38,12 +50,17 @@ const PremiumPage = () => {
         settings: {
           displayMode: "overlay",
           theme: "light",
-          locale: "en",
+          locale: localeMap[i18n.language] || "en",
           successUrl: `${window.location.origin}/perfil?upgraded=true`,
         },
       });
     } catch (err) {
       console.error("[Paddle] Checkout open failed:", err);
+      toast({
+        title: "Erro ao abrir checkout",
+        description: err instanceof Error ? err.message : "Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
