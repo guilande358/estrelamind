@@ -77,7 +77,23 @@
       "task": "tâche",
       "expense": "dépense"
     },
-    "speechNotSupported": "Votre navigateur ne prend pas en charge la reconnaissance vocale."
+    "speechNotSupported": "Votre navigateur ne prend pas en charge la reconnaissance vocale.",
+    "done": "Terminé",
+    "sayDone": "Dites \"terminé\" pour arrêter",
+    "fabLabel": "Parler à l'IA",
+    "chatTitle": "Conversation IA",
+    "chatSubtitle": "Parlez, demandez et créez à la voix",
+    "chatPlaceholder": "Écrivez ou touchez le micro…",
+    "emptyTitle": "Tout est calme ici",
+    "emptyHint": "Touchez le micro en bas et parlez librement. Dites \"crée-le\" pour enregistrer automatiquement.",
+    "thinking": "Réflexion…",
+    "autoCreated": "{{count}} élément créé automatiquement",
+    "autoCreated_plural": "{{count}} éléments créés automatiquement",
+    "errorProcess": "Échec du traitement. Réessayez.",
+    "mute": "Couper la voix",
+    "unmute": "Activer la voix",
+    "readUnread": "Lire les non lus",
+    "noUnread": "Aucun nouveau message"
   },
   "profile": {
     "title": "Profil",
