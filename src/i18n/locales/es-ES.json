@@ -77,7 +77,23 @@
       "task": "tarea",
       "expense": "gasto"
     },
-    "speechNotSupported": "Tu navegador no soporta reconocimiento de voz."
+    "speechNotSupported": "Tu navegador no soporta reconocimiento de voz.",
+    "done": "Listo",
+    "sayDone": "Di \"listo\" cuando quieras parar",
+    "fabLabel": "Hablar con la IA",
+    "chatTitle": "Conversación con la IA",
+    "chatSubtitle": "Habla, pregunta y crea por voz",
+    "chatPlaceholder": "Escribe o toca el micrófono…",
+    "emptyTitle": "Todo despejado",
+    "emptyHint": "Toca el micrófono en la barra inferior y habla libremente. Di \"créalo\" para guardar automáticamente.",
+    "thinking": "Pensando…",
+    "autoCreated": "{{count}} elemento creado automáticamente",
+    "autoCreated_plural": "{{count}} elementos creados automáticamente",
+    "errorProcess": "Error al procesar. Inténtalo de nuevo.",
+    "mute": "Silenciar voz",
+    "unmute": "Activar voz",
+    "readUnread": "Leer no leídos",
+    "noUnread": "Sin mensajes nuevos"
   },
   "profile": {
     "title": "Perfil",
