@@ -6,13 +6,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, paddle-signature, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// Verify Paddle webhook signature (HMAC-SHA256 over `${ts}:${body}`).
+// Header format: "ts=<unix>;h1=<hex>"
+async function verifyPaddleSignature(rawBody: string, signatureHeader: string | null, secret: string): Promise<boolean> {
+  if (!signatureHeader) return false;
+  const parts = Object.fromEntries(
+    signatureHeader.split(';').map((p) => {
+      const [k, ...v] = p.split('=');
+      return [k.trim(), v.join('=').trim()];
+    })
+  ) as Record<string, string>;
+  const ts = parts['ts'];
+  const provided = parts['h1'];
+  if (!ts || !provided) return false;
+
+  // Reject signatures older than 5 minutes (replay protection)
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - parseInt(ts, 10)) > 300) return false;
+
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`${ts}:${rawBody}`));
+  const computed = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
+
+  if (computed.length !== provided.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computed.length; i++) diff |= computed.charCodeAt(i) ^ provided.charCodeAt(i);
+  return diff === 0;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const body = await req.json();
+    const PADDLE_WEBHOOK_SECRET = Deno.env.get('PADDLE_WEBHOOK_SECRET');
+    if (!PADDLE_WEBHOOK_SECRET) {
+      console.error('PADDLE_WEBHOOK_SECRET not configured — rejecting webhook');
+      return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const rawBody = await req.text();
+    const signature = req.headers.get('paddle-signature');
+    const valid = await verifyPaddleSignature(rawBody, signature, PADDLE_WEBHOOK_SECRET);
+    if (!valid) {
+      console.warn('Invalid Paddle signature');
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = JSON.parse(rawBody);
     const eventType = body.event_type;
     const data = body.data;
 
