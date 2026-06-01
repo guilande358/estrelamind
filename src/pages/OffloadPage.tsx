@@ -111,31 +111,59 @@ const OffloadPage = () => {
   };
 
   const persistItems = async (items: AIItem[]) => {
-    for (const item of items) {
-      try {
+    const results = await Promise.allSettled(
+      items.map((item) => {
         if (item.type === "task" || item.type === "reminder") {
-          await createTask.mutateAsync({
+          return createTask.mutateAsync({
             title: item.title,
             due_date: item.date || null,
             due_time: item.time || null,
             priority: item.priority || "medium",
             category: item.category || "geral",
           });
-        } else if (item.type === "event") {
+        }
+        if (item.type === "event") {
           const startDate = item.date ? `${item.date}T${item.time || "09:00"}:00` : new Date().toISOString();
-          await createEvent.mutateAsync({ title: item.title, start_date: startDate, category: item.category || "geral" });
-        } else if (item.type === "expense") {
-          await createExpense.mutateAsync({
+          return createEvent.mutateAsync({ title: item.title, start_date: startDate, category: item.category || "geral" });
+        }
+        if (item.type === "expense") {
+          return createExpense.mutateAsync({
             title: item.title,
             amount: item.amount || 0,
             expense_date: item.date || new Date().toISOString().split("T")[0],
             category: item.category || "outros",
           });
         }
-      } catch (e) {
-        console.error("Save item failed", e);
-      }
+        return Promise.reject(new Error("unknown item type"));
+      })
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - ok;
+    results.forEach((r) => r.status === "rejected" && console.error("persistItems", r.reason));
+    // Refresh all listing pages immediately
+    qc.invalidateQueries({ queryKey: ["tasks"] });
+    qc.invalidateQueries({ queryKey: ["events"] });
+    qc.invalidateQueries({ queryKey: ["expenses"] });
+    return { ok, failed };
+  };
+
+  const confirmItems = async (msgId: string, items: AIItem[]) => {
+    setSavingMsgId(msgId);
+    const { ok, failed } = await persistItems(items);
+    setSavingMsgId(null);
+    setResolvedMsgIds((prev) => new Set(prev).add(msgId));
+    if (failed === 0) {
+      toast({ title: t("offload.created", { count: ok, defaultValue: `${ok} item(s) criado(s)` }) });
+    } else {
+      toast({
+        title: t("offload.partialCreated", { ok, failed, defaultValue: `${ok} criado(s), ${failed} falharam` }),
+        variant: "destructive",
+      });
     }
+  };
+
+  const dismissItems = (msgId: string) => {
+    setResolvedMsgIds((prev) => new Set(prev).add(msgId));
   };
 
   const handleSend = async (raw?: string) => {
