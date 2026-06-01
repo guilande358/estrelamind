@@ -47,11 +47,13 @@ const OffloadPage = () => {
   const { createTask } = useTasks();
   const { createEvent } = useEvents();
   const { createExpense } = useExpenses();
-  const { consumePendingText, open: openVoice } = useVoiceCapture();
+  const { consumePendingText, pendingText, open: openVoice } = useVoiceCapture();
   const qc = useQueryClient();
 
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [savingMsgId, setSavingMsgId] = useState<string | null>(null);
+  const [resolvedMsgIds, setResolvedMsgIds] = useState<Set<string>>(new Set());
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -79,12 +81,13 @@ const OffloadPage = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length, isProcessing]);
 
-  // Pick up pending text from voice overlay
+  // Pick up pending text from voice overlay (reacts every time new text arrives)
   useEffect(() => {
+    if (!pendingText) return;
     const text = consumePendingText();
     if (text) handleSend(text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pendingText]);
 
   const speak = (text: string) => {
     if (muted) return;
