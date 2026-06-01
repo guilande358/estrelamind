@@ -1,99 +1,52 @@
 ## Objetivo
 
-Transformar o "Offload" de uma aba comum num **botão de ação principal (FAB)** centralizado na barra inferior, com fluxo de gravação por voz global, comando "terminado" para parar, e uma nova tela tipo **chat de voz** com relatórios, notificações e criação automática por voz.
+O chat do Offload conversa, mas hoje **não persiste** os itens de forma confiável nas tabelas `tasks`, `events` e `expenses` — ou cria sem confirmação e sem refletir nas telas Home/Agenda/Finanças. Vou consertar essa ponte mantendo o schema atual. A moeda não pode ser só brasileira coloque o sistema de todas as  moeda com um sistema de cambio inteligente, e colocada a preferencia do usuário, cria também gráficos, relatórios este quando o usuário pedir, e ser possível exportar em formato de arquivos.
 
-## 1. Nova barra inferior com FAB central
+## Diagnóstico
 
-Reformular `BottomNavigation.tsx`:
+1. `OffloadPage.handleSend` só persiste se houver palavra-gatilho **OU** `kind === "create"`. Como a edge sempre devolve `kind: "create"` quando chama `create_items`, hoje cria **sempre, sem confirmação** — contraditório com o cartão de confirmação que deveria existir.
+2. O componente `ConfirmationCard` está importado mas **nunca é renderizado** no chat.
+3. Erros das mutations (`createTask/createEvent/createExpense`) são engolidos com `console.error` — usuário não vê falha.
+4. `consumePendingText` roda só no **mount**: se o usuário já está em `/offload` e abre o overlay de voz pelo FAB, o texto novo não é processado.
+5. Após criar, as queries de outras páginas (`["tasks"]`, `["events"]`, `["expenses"]`) são invalidadas pelos hooks, então **Home, Agenda e Finanças atualizam sozinhas** — isso já funciona, só precisa que a inserção aconteça.
+6. Prompt da edge pode emitir `date` solto ("sexta-feira") — vou reforçar formato `YYYY-MM-DD` e `HH:MM`.
 
-```text
-[ Home ]  [ Agenda ]  ( 🎙 FAB )  [ Finanças ]  [ Perfil ]
-```
+## O que vou mudar
 
-- 4 abas normais (Home, Agenda, Finanças, Perfil) divididas 2+2.
-- Botão central grande, circular, elevado (~64px), com gradiente (`gradient-calm`), sombra e leve `scale-on-tap`.
-- O FAB **não navega** diretamente — ele aciona o modo de escuta global.
-- Remover "Offload" da lista de abas normais.
+### `src/pages/OffloadPage.tsx`
 
-## 2. Modo de escuta global (overlay)
+- Renderizar `**ConfirmationCard**` dentro da bolha do assistente sempre que `items.length > 0` **e** o usuário **não** disser palavra-gatilho.
+- Botão **Confirmar** chama `persistItems` e marca a mensagem como confirmada (campo `items_created: true` em memória + update no Supabase).
+- Botão **Descartar** apenas oculta o cartão.
+- Auto-criar **só** quando `containsAny(text, AUTO_CREATE_WORDS)` for verdadeiro (resposta do usuário à pergunta).
+- `persistItems`: aguardar com `Promise.allSettled`, contar sucessos/falhas e mostrar **toast** com resultado real (ex.: "2 de 3 itens criados, 1 falhou").
+- Invalidar explicitamente `["tasks"]`, `["events"]`, `["expenses"]` no `queryClient` para garantir atualização imediata em Home/Agenda/Finanças.
+- Trocar `useEffect([])` por `useEffect([pendingText])` para processar texto vindo do overlay sempre que ele chegar.
 
-Criar `src/components/offload/VoiceCaptureOverlay.tsx` + hook `src/hooks/useVoiceCapture.ts`:
+### `supabase/functions/offload-process/index.ts`
 
-- Ao tocar o FAB em qualquer rota, abre overlay full-screen com:
-  - Anel animado de microfone com **gradiente azul→verde→violeta** pulsando conforme volume (usar `AnalyserNode` do `MediaStream` para amplitude → escala/cor).
-  - Texto "Ouvindo…" no idioma atual (i18n).
-  - Transcrição parcial ao vivo.
-  - Botão "Cancelar".
-- Usa `useSpeechRecognition` já existente (idioma vem de `i18n.language`).
-- **Detecção de palavra de parada multi-idioma**: ao detectar no transcript final/parcial qualquer um de
-`terminado | terminei | pronto | finalizar | done | finished | stop | terminé | fini | terminado | listo | acabado`
-→ para a gravação e dispara processamento.
-- O texto enviado é limpo da palavra-gatilho final.
+- Reforçar no prompt: `date` **obrigatoriamente** `YYYY-MM-DD`, `time` `HH:MM` 24h; se ambíguo, deixar `null` em vez de inventar.
+- Aceitar tipo `income` mapeado como expense negativa (ou tarefa "receita") — manter só os 4 tipos atuais; income vira `expense` com `amount` negativo.
+- Garantir que `tool_choice` permaneça `auto` para o modo report continuar funcionando.
 
-## 3. Roteamento após captura
+### `src/components/offload/ConfirmationCard.tsx`
 
-- Ao terminar (por "terminado" ou botão), navegar para `/offload` passando o texto capturado em `location.state` (ou store leve em Context).
-- Se o usuário já estiver em `/offload`, apenas injetar no chat sem navegar.
+- Compactar a versão usada em mensagens (sem o card de resposta duplicado, só itens + botões Confirmar/Descartar inline), via prop `compact`.
 
-## 4. Nova `/offload` como Chat de Voz
+## Fora de escopo
 
-Refatorar `OffloadPage.tsx` para layout de **chat conversacional**:
+- Não mexer no schema (tabelas seguem como estão).
+- Não mexer em Premium/Paddle/ElevenLabs/auth.
+- Não criar tabelas novas.
 
-- Lista de mensagens (usuário ↔ MindFlow AI), com bolhas estilo iMessage.
-- Mensagem do usuário = transcrição capturada; mensagem da IA = `response` + cards de itens detectados (`ConfirmationCard`).
-- Header com badges de **notificações não lidas** (mensagens da IA ainda não "ouvidas"/abertas) e botão "Ler em voz alta" (TTS / ElevenLabs se premium).
-- FAB também disponível na própria página para continuar gravando.
-- Persistir histórico em `localStorage` (chave por `user.id`) — sem nova tabela neste plano.
+## Arquivos editados
 
-## 5. Comandos de voz dentro do chat
+- `src/pages/OffloadPage.tsx`
+- `src/components/offload/ConfirmationCard.tsx`
+- `supabase/functions/offload-process/index.ts`
 
-Estender o edge function `offload-process` para classificar a intenção do texto:
+## Verificação após implementar
 
-- `create` — criar itens (já existe). Gatilhos de criação automática: detectar no texto qualquer de
-`"pode criar" | "cria isso" | "cria pra mim" | "crie" | "create it" | "go ahead" | "please create" | "créalo" | "crée-le"`
-→ no front, ao receber a resposta da IA, **pular o passo de confirmação** e chamar `handleConfirm` automaticamente.
-- `report` — perguntas como "quantas tarefas pendentes?", "quanto gastei esse mês?", "o que tenho amanhã?". O edge function recebe também um resumo agregado das tabelas (tasks/events/expenses do usuário do mês corrente) e responde em linguagem natural.
-- `notifications` — "tenho mensagens novas?" / "leia as não lidas" → cliente responde lendo as mensagens marcadas não-lidas via TTS.
-
-Mudanças no edge function:
-
-- Adicionar tool `answer_report` com parâmetros `{ kind: 'tasks'|'events'|'expenses'|'mixed', response: string }`.
-- Receber payload `{ text, language, context: { pendingTasks, todayEvents, monthExpensesTotal, ... } }`.
-- Cliente busca esses agregados antes de invocar (queries simples já com hooks existentes).
-- `tool_choice` passa de forçado para `auto` (deixar o modelo escolher entre `create_items` e `answer_report`).
-
-## 6. Resposta falada
-
-- Toda resposta da IA é falada automaticamente (ElevenLabs se premium, Web Speech caso contrário) e marcada como "lida" só após reprodução / abertura.
-- Toggle "silenciar respostas" no header do chat (persistido em localStorage).
-
-## 7. i18n
-
-Adicionar chaves em `pt-BR / en-US / fr-FR / es-ES`:
-
-- `offload.listening`, `offload.sayDone`, `offload.stopWords` (lista), `offload.autoCreated`, `offload.unread`, `offload.muteVoice`, `offload.report.*`.
-
-## 8. Arquivos afetados
-
-- `src/components/layout/BottomNavigation.tsx` — novo layout com FAB.
-- `src/components/layout/AppLayout.tsx` — renderizar `<VoiceCaptureOverlay />` global.
-- `src/components/offload/VoiceCaptureOverlay.tsx` — **novo**.
-- `src/hooks/useVoiceCapture.ts` — **novo** (estado global via Context ou Zustand-lite com `useSyncExternalStore`).
-- `src/contexts/VoiceCaptureContext.tsx` — **novo**.
-- `src/pages/OffloadPage.tsx` — reescrito como chat.
-- `src/components/offload/ChatMessage.tsx` — **novo**.
-- `supabase/functions/offload-process/index.ts` — adicionar tool `answer_report` + contexto agregado.
-- `src/i18n/locales/*.json` — novas chaves.
-- `src/App.tsx` — envolver com `VoiceCaptureProvider`.
-
-## Fora de escopo (manter como está)
-
-- Paddle / Premium / Perfil.
-- Schema do banco (sem novas tabelas; histórico do chat fica em localStorage por enquanto — posso migrar para Supabase num passo futuro se quiser persistência cross-device).
-- Login social / autenticação.
-
-## Confirmações que preciso de você
-
-1. **Histórico do chat**: ok manter em `localStorage` por agora, ou já criar tabela `offload_messages` no Supabase? cria no supabase
-2. **FAB**: prefere ícone de microfone ✅ ou estilo "onda sonora" animada? aplique as duas mais o mais simplis para o plano free
-3. **Auto-criar sem confirmar** quando o usuário diz "pode criar" — confirma que NÃO quer mostrar o card de confirmação nesse caso? sim
+1. Falar "marca consulta médica amanhã às 10h" → ver cartão de confirmação → tocar Confirmar → checar `tasks` no banco e ver aparecer em Home/Agenda.
+2. Falar "gastei 50 reais no mercado hoje, pode criar" → criação automática + aparece em Finanças.
+3. Perguntar "quantas tarefas tenho pendentes?" → resposta de relatório, sem criar nada.
