@@ -17,7 +17,7 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { useVoiceCapture, AUTO_CREATE_WORDS, containsAny } from "@/contexts/VoiceCaptureContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AIItem } from "@/components/offload/ConfirmationCard";
+import ConfirmationCard, { type AIItem } from "@/components/offload/ConfirmationCard";
 import { cn } from "@/lib/utils";
 
 type Role = "user" | "assistant";
@@ -47,11 +47,13 @@ const OffloadPage = () => {
   const { createTask } = useTasks();
   const { createEvent } = useEvents();
   const { createExpense } = useExpenses();
-  const { consumePendingText, open: openVoice } = useVoiceCapture();
+  const { consumePendingText, pendingText, open: openVoice } = useVoiceCapture();
   const qc = useQueryClient();
 
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [savingMsgId, setSavingMsgId] = useState<string | null>(null);
+  const [resolvedMsgIds, setResolvedMsgIds] = useState<Set<string>>(new Set());
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -79,12 +81,13 @@ const OffloadPage = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length, isProcessing]);
 
-  // Pick up pending text from voice overlay
+  // Pick up pending text from voice overlay (reacts every time new text arrives)
   useEffect(() => {
+    if (!pendingText) return;
     const text = consumePendingText();
     if (text) handleSend(text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pendingText]);
 
   const speak = (text: string) => {
     if (muted) return;
@@ -108,31 +111,59 @@ const OffloadPage = () => {
   };
 
   const persistItems = async (items: AIItem[]) => {
-    for (const item of items) {
-      try {
+    const results = await Promise.allSettled(
+      items.map((item) => {
         if (item.type === "task" || item.type === "reminder") {
-          await createTask.mutateAsync({
+          return createTask.mutateAsync({
             title: item.title,
             due_date: item.date || null,
             due_time: item.time || null,
             priority: item.priority || "medium",
             category: item.category || "geral",
           });
-        } else if (item.type === "event") {
+        }
+        if (item.type === "event") {
           const startDate = item.date ? `${item.date}T${item.time || "09:00"}:00` : new Date().toISOString();
-          await createEvent.mutateAsync({ title: item.title, start_date: startDate, category: item.category || "geral" });
-        } else if (item.type === "expense") {
-          await createExpense.mutateAsync({
+          return createEvent.mutateAsync({ title: item.title, start_date: startDate, category: item.category || "geral" });
+        }
+        if (item.type === "expense") {
+          return createExpense.mutateAsync({
             title: item.title,
             amount: item.amount || 0,
             expense_date: item.date || new Date().toISOString().split("T")[0],
             category: item.category || "outros",
           });
         }
-      } catch (e) {
-        console.error("Save item failed", e);
-      }
+        return Promise.reject(new Error("unknown item type"));
+      })
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - ok;
+    results.forEach((r) => r.status === "rejected" && console.error("persistItems", r.reason));
+    // Refresh all listing pages immediately
+    qc.invalidateQueries({ queryKey: ["tasks"] });
+    qc.invalidateQueries({ queryKey: ["events"] });
+    qc.invalidateQueries({ queryKey: ["expenses"] });
+    return { ok, failed };
+  };
+
+  const confirmItems = async (msgId: string, items: AIItem[]) => {
+    setSavingMsgId(msgId);
+    const { ok, failed } = await persistItems(items);
+    setSavingMsgId(null);
+    setResolvedMsgIds((prev) => new Set(prev).add(msgId));
+    if (failed === 0) {
+      toast({ title: t("offload.created", { count: ok, defaultValue: `${ok} item(s) criado(s)` }) });
+    } else {
+      toast({
+        title: t("offload.partialCreated", { ok, failed, defaultValue: `${ok} criado(s), ${failed} falharam` }),
+        variant: "destructive",
+      });
     }
+  };
+
+  const dismissItems = (msgId: string) => {
+    setResolvedMsgIds((prev) => new Set(prev).add(msgId));
   };
 
   const handleSend = async (raw?: string) => {
@@ -176,15 +207,20 @@ const OffloadPage = () => {
 
       const response: string = data?.response || "";
       const items: AIItem[] = data?.items || [];
-      const kind: string = data?.kind || (items.length > 0 ? "create" : "report");
 
-      await insertMessage({ role: "assistant", content: response, items: items.length ? items : null, read: false });
+      const inserted = await insertMessage({ role: "assistant", content: response, items: items.length ? items : null, read: false });
       speak(response);
 
-      // Auto-create if user said "pode criar" / etc OR AI returned items in clear create-mode
-      if (items.length && (containsAny(text, AUTO_CREATE_WORDS) || kind === "create")) {
-        await persistItems(items);
-        toast({ title: t("offload.autoCreated", { count: items.length }) });
+      // Auto-create only when the user clearly asked for it
+      if (items.length && containsAny(text, AUTO_CREATE_WORDS)) {
+        const { ok, failed } = await persistItems(items);
+        if (inserted?.id) setResolvedMsgIds((prev) => new Set(prev).add(inserted.id));
+        toast({
+          title: failed
+            ? t("offload.partialCreated", { ok, failed, defaultValue: `${ok} criado(s), ${failed} falharam` })
+            : t("offload.autoCreated", { count: ok, defaultValue: `${ok} item(s) criado(s) automaticamente` }),
+          variant: failed ? "destructive" : "default",
+        });
       }
     } catch (e) {
       console.error("Process error", e);
@@ -266,20 +302,30 @@ const OffloadPage = () => {
               <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_p]:my-0">
                 <ReactMarkdown>{m.content}</ReactMarkdown>
               </div>
-              {m.items && m.items.length > 0 && (
-                <div className="mt-2 space-y-1.5">
-                  {m.items.map((it, i) => {
-                    const Icon = typeIcons[it.type] || CheckCircle2;
-                    return (
-                      <div key={i} className="flex items-center gap-2 bg-background/40 rounded-lg px-2 py-1.5">
-                        <Icon className="w-4 h-4 shrink-0" />
-                        <span className="text-xs flex-1 truncate">{it.title}</span>
-                        {it.date && <span className="text-[10px] opacity-70">{it.date}</span>}
-                        {it.amount != null && <span className="text-[10px] opacity-70">{it.amount}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
+              {m.role === "assistant" && m.items && m.items.length > 0 && (
+                resolvedMsgIds.has(m.id) ? (
+                  <div className="mt-2 space-y-1.5">
+                    {m.items.map((it, i) => {
+                      const Icon = typeIcons[it.type] || CheckCircle2;
+                      return (
+                        <div key={i} className="flex items-center gap-2 bg-background/40 rounded-lg px-2 py-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                          <Icon className="w-4 h-4 shrink-0 opacity-70" />
+                          <span className="text-xs flex-1 truncate">{it.title}</span>
+                          {it.date && <span className="text-[10px] opacity-70">{it.date}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <ConfirmationCard
+                    compact
+                    items={m.items}
+                    isLoading={savingMsgId === m.id}
+                    onConfirm={() => confirmItems(m.id, m.items!)}
+                    onDismiss={() => dismissItems(m.id)}
+                  />
+                )
               )}
               {m.role === "assistant" && (
                 <button

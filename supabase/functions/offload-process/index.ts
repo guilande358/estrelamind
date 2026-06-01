@@ -58,8 +58,12 @@ YOU HAVE TWO TOOLS — choose the right one:
 
 1) create_items — when the user describes things to remember/do (tasks, events, expenses, reminders).
    - Be aggressive: if it sounds actionable, extract it.
-   - Today is ${today}. Resolve relative dates ("amanhã", "tomorrow", "next Friday", "lunes").
-   - Parse currency amounts ("R$ 50", "$20", "50 MZN") into the numeric 'amount'.
+   - Today is ${today}. Resolve relative dates ("amanhã", "tomorrow", "next Friday", "lunes") to an absolute date.
+   - 'date' MUST be in strict ISO format YYYY-MM-DD (e.g. "2026-06-02"). Never output natural-language dates.
+   - 'time' MUST be HH:MM 24h (e.g. "14:30"). Never include AM/PM, seconds or timezone.
+   - If a field is ambiguous or not mentioned, OMIT it entirely (do not invent).
+   - Parse currency amounts ("R$ 50", "$20", "50 MZN", "€10") into the numeric 'amount' (positive number, no symbol).
+   - For income mentions ("recebi", "ganhei", "got paid"), still use type='expense' but amount NEGATIVE.
    - Always include a short, warm confirmation in 'response' (detected language).
 
 2) answer_report — when the user is ASKING about their data (counts, totals, pending items, today's schedule, unread messages).
