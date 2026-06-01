@@ -302,20 +302,30 @@ const OffloadPage = () => {
               <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_p]:my-0">
                 <ReactMarkdown>{m.content}</ReactMarkdown>
               </div>
-              {m.items && m.items.length > 0 && (
-                <div className="mt-2 space-y-1.5">
-                  {m.items.map((it, i) => {
-                    const Icon = typeIcons[it.type] || CheckCircle2;
-                    return (
-                      <div key={i} className="flex items-center gap-2 bg-background/40 rounded-lg px-2 py-1.5">
-                        <Icon className="w-4 h-4 shrink-0" />
-                        <span className="text-xs flex-1 truncate">{it.title}</span>
-                        {it.date && <span className="text-[10px] opacity-70">{it.date}</span>}
-                        {it.amount != null && <span className="text-[10px] opacity-70">{it.amount}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
+              {m.role === "assistant" && m.items && m.items.length > 0 && (
+                resolvedMsgIds.has(m.id) ? (
+                  <div className="mt-2 space-y-1.5">
+                    {m.items.map((it, i) => {
+                      const Icon = typeIcons[it.type] || CheckCircle2;
+                      return (
+                        <div key={i} className="flex items-center gap-2 bg-background/40 rounded-lg px-2 py-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                          <Icon className="w-4 h-4 shrink-0 opacity-70" />
+                          <span className="text-xs flex-1 truncate">{it.title}</span>
+                          {it.date && <span className="text-[10px] opacity-70">{it.date}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <ConfirmationCard
+                    compact
+                    items={m.items}
+                    isLoading={savingMsgId === m.id}
+                    onConfirm={() => confirmItems(m.id, m.items!)}
+                    onDismiss={() => dismissItems(m.id)}
+                  />
+                )
               )}
               {m.role === "assistant" && (
                 <button
