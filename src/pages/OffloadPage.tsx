@@ -17,7 +17,7 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { useVoiceCapture, AUTO_CREATE_WORDS, containsAny } from "@/contexts/VoiceCaptureContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AIItem } from "@/components/offload/ConfirmationCard";
+import ConfirmationCard, { type AIItem } from "@/components/offload/ConfirmationCard";
 import { cn } from "@/lib/utils";
 
 type Role = "user" | "assistant";
