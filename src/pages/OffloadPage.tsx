@@ -207,15 +207,20 @@ const OffloadPage = () => {
 
       const response: string = data?.response || "";
       const items: AIItem[] = data?.items || [];
-      const kind: string = data?.kind || (items.length > 0 ? "create" : "report");
 
-      await insertMessage({ role: "assistant", content: response, items: items.length ? items : null, read: false });
+      const inserted = await insertMessage({ role: "assistant", content: response, items: items.length ? items : null, read: false });
       speak(response);
 
-      // Auto-create if user said "pode criar" / etc OR AI returned items in clear create-mode
-      if (items.length && (containsAny(text, AUTO_CREATE_WORDS) || kind === "create")) {
-        await persistItems(items);
-        toast({ title: t("offload.autoCreated", { count: items.length }) });
+      // Auto-create only when the user clearly asked for it
+      if (items.length && containsAny(text, AUTO_CREATE_WORDS)) {
+        const { ok, failed } = await persistItems(items);
+        if (inserted?.id) setResolvedMsgIds((prev) => new Set(prev).add(inserted.id));
+        toast({
+          title: failed
+            ? t("offload.partialCreated", { ok, failed, defaultValue: `${ok} criado(s), ${failed} falharam` })
+            : t("offload.autoCreated", { count: ok, defaultValue: `${ok} item(s) criado(s) automaticamente` }),
+          variant: failed ? "destructive" : "default",
+        });
       }
     } catch (e) {
       console.error("Process error", e);
