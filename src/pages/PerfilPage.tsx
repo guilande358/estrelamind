@@ -1,8 +1,9 @@
-import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe, LogOut, Volume2 } from "lucide-react";
+import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe, LogOut, Volume2, BarChart3, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SUPPORTED_CURRENCIES } from "@/hooks/useExchangeRates";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
 import { languageFlags, type SupportedLanguage } from "@/i18n";
