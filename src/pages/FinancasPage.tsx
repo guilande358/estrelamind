@@ -108,7 +108,7 @@ const FinancasPage = () => {
                       <span className="font-medium text-foreground text-sm capitalize">{cat}</span>
                     </div>
                     <p className="text-lg font-semibold text-foreground">
-                      R$ {spent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {formatMoney(spent, targetCurrency)}
                     </p>
                     <Progress value={percentage} className="h-1.5 mt-2" />
                     <p className="text-xs mt-1 text-muted-foreground">{percentage}% do total</p>
