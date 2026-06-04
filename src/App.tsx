@@ -46,6 +46,7 @@ const App = () => (
               <Route element={<ProtectedRoute />}>
                 <Route path="/mode-select" element={<ModeSelectPage />} />
                 <Route path="/premium" element={<PremiumPage />} />
+                <Route path="/relatorios" element={<ReportsPage />} />
                 <Route element={<AppLayout />}>
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/agenda" element={<AgendaPage />} />
