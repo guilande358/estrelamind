@@ -82,11 +82,11 @@ const FinancasPage = () => {
           <CardContent className="p-5">
             <p className="text-white/80 text-sm">{t("finances.monthSpending")}</p>
             <div className="flex items-end gap-2 mt-1">
-              <span className="text-3xl font-bold">R$ {totalSpent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              <span className="text-3xl font-bold">{formatMoney(totalSpent, targetCurrency)}</span>
             </div>
             <div className="mt-4 flex items-center gap-4">
               <div className="flex items-center gap-1">
-                <span className="text-sm">{expenses.length} despesas este mês</span>
+                <span className="text-sm">{expenses.length} despesas · convertido para {targetCurrency}</span>
               </div>
             </div>
           </CardContent>
