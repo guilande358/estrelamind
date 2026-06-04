@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingDown, TrendingUp, CreditCard, Plus, Trash2 } from "lucide-react";
+import { TrendingDown, TrendingUp, CreditCard, Plus, Trash2, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +7,9 @@ import { useTranslation } from "react-i18next";
 import { useExpenses } from "@/hooks/useExpenses";
 import ExpenseForm from "@/components/expenses/ExpenseForm";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
+import { useExchangeRates, convert, formatMoney } from "@/hooks/useExchangeRates";
 
 const categoryIcons: Record<string, string> = {
   casa: "🏠",
