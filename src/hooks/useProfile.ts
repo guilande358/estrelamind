@@ -10,6 +10,7 @@ export interface Profile {
   mode: string | null;
   language: string | null;
   is_premium: boolean | null;
+  preferred_currency: string | null;
   created_at: string;
   updated_at: string;
 }

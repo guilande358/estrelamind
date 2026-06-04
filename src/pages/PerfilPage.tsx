@@ -1,8 +1,9 @@
-import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe, LogOut, Volume2 } from "lucide-react";
+import { User, Bell, Moon, Shield, Crown, ChevronRight, Briefcase, GraduationCap, Users, Globe, LogOut, Volume2, BarChart3, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SUPPORTED_CURRENCIES } from "@/hooks/useExchangeRates";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useLanguage";
 import { languageFlags, type SupportedLanguage } from "@/i18n";
@@ -17,6 +18,7 @@ const PerfilPage = () => {
   const { t } = useTranslation();
   const { currentLanguage, setLanguage, supportedLanguages } = useLanguage();
   const [langDialogOpen, setLangDialogOpen] = useState(false);
+  const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { data: profile, updateProfile } = useProfile();
   const { theme, toggleTheme } = useTheme();
@@ -240,6 +242,62 @@ const PerfilPage = () => {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Currency */}
+            <Dialog open={currencyDialogOpen} onOpenChange={setCurrencyDialogOpen}>
+              <DialogTrigger asChild>
+                <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Moeda</p>
+                      <p className="text-sm text-muted-foreground">
+                        {profile?.preferred_currency || "BRL"}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-sm max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Moeda preferida</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-1">
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <button
+                      key={c.code}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
+                        (profile?.preferred_currency || "BRL") === c.code ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      }`}
+                      onClick={() => {
+                        updateProfile.mutate({ preferred_currency: c.code });
+                        setCurrencyDialogOpen(false);
+                      }}
+                    >
+                      <span className="font-medium">{c.code} — {c.name}</span>
+                      <span className="text-muted-foreground">{c.symbol}</span>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Reports */}
+            <div
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/relatorios")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-foreground">Relatórios e exportação</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
 
             {/* Privacy */}
             <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">

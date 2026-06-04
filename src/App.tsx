@@ -22,6 +22,7 @@ import FinancasPage from "./pages/FinancasPage";
 import OffloadPage from "./pages/OffloadPage";
 import PerfilPage from "./pages/PerfilPage";
 import PremiumPage from "./pages/PremiumPage";
+import ReportsPage from "./pages/ReportsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
               <Route element={<ProtectedRoute />}>
                 <Route path="/mode-select" element={<ModeSelectPage />} />
                 <Route path="/premium" element={<PremiumPage />} />
+                <Route path="/relatorios" element={<ReportsPage />} />
                 <Route element={<AppLayout />}>
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/agenda" element={<AgendaPage />} />

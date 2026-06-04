@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingDown, TrendingUp, CreditCard, Plus, Trash2 } from "lucide-react";
+import { TrendingDown, TrendingUp, CreditCard, Plus, Trash2, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +7,9 @@ import { useTranslation } from "react-i18next";
 import { useExpenses } from "@/hooks/useExpenses";
 import ExpenseForm from "@/components/expenses/ExpenseForm";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
+import { useExchangeRates, convert, formatMoney } from "@/hooks/useExchangeRates";
 
 const categoryIcons: Record<string, string> = {
   casa: "🏠",
@@ -22,20 +25,28 @@ const categoryIcons: Record<string, string> = {
 const FinancasPage = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { data: profile } = useProfile();
+  const targetCurrency = profile?.preferred_currency || "BRL";
+  const { data: rates } = useExchangeRates("USD");
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [formOpen, setFormOpen] = useState(false);
 
   const { data: expenses = [], createExpense, deleteExpense, togglePaid } = useExpenses({ month: currentMonth });
 
+  // Convert each expense to target currency
+  const convertedExpenses = expenses.map((e) => ({
+    ...e,
+    convertedAmount: convert(Number(e.amount), e.currency || "BRL", targetCurrency, rates),
+  }));
+
   // Calculate stats
-  const totalSpent = expenses.reduce((acc, e) => acc + Number(e.amount), 0);
-  const paidExpenses = expenses.filter((e) => e.paid);
-  const unpaidExpenses = expenses.filter((e) => !e.paid);
+  const totalSpent = convertedExpenses.reduce((acc, e) => acc + e.convertedAmount, 0);
 
   // Group by category
-  const byCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+  const byCategory = convertedExpenses.reduce<Record<string, number>>((acc, e) => {
     const cat = e.category || "outros";
-    acc[cat] = (acc[cat] || 0) + Number(e.amount);
+    acc[cat] = (acc[cat] || 0) + e.convertedAmount;
     return acc;
   }, {});
 
@@ -53,10 +64,15 @@ const FinancasPage = () => {
       <header className="px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">{t("finances.title")}</h1>
-          <Button size="sm" className="gradient-calm text-white border-0" onClick={() => setFormOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            {t("finances.add")}
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => navigate("/relatorios")}>
+              <BarChart3 className="w-4 h-4" />
+            </Button>
+            <Button size="sm" className="gradient-calm text-white border-0" onClick={() => setFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              {t("finances.add")}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -66,11 +82,11 @@ const FinancasPage = () => {
           <CardContent className="p-5">
             <p className="text-white/80 text-sm">{t("finances.monthSpending")}</p>
             <div className="flex items-end gap-2 mt-1">
-              <span className="text-3xl font-bold">R$ {totalSpent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              <span className="text-3xl font-bold">{formatMoney(totalSpent, targetCurrency)}</span>
             </div>
             <div className="mt-4 flex items-center gap-4">
               <div className="flex items-center gap-1">
-                <span className="text-sm">{expenses.length} despesas este mês</span>
+                <span className="text-sm">{expenses.length} despesas · convertido para {targetCurrency}</span>
               </div>
             </div>
           </CardContent>
@@ -92,7 +108,7 @@ const FinancasPage = () => {
                       <span className="font-medium text-foreground text-sm capitalize">{cat}</span>
                     </div>
                     <p className="text-lg font-semibold text-foreground">
-                      R$ {spent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {formatMoney(spent, targetCurrency)}
                     </p>
                     <Progress value={percentage} className="h-1.5 mt-2" />
                     <p className="text-xs mt-1 text-muted-foreground">{percentage}% do total</p>
@@ -111,7 +127,7 @@ const FinancasPage = () => {
           <p className="text-muted-foreground text-sm text-center py-6">Nenhuma despesa este mês</p>
         ) : (
           <div className="space-y-3">
-            {expenses.map((expense) => (
+            {convertedExpenses.map((expense) => (
               <Card key={expense.id} className="shadow-card border-0">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -128,7 +144,12 @@ const FinancasPage = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      <p className="font-semibold text-foreground">R$ {Number(expense.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                      <p className="font-semibold text-foreground">{formatMoney(expense.convertedAmount, targetCurrency)}</p>
+                      {(expense.currency || "BRL") !== targetCurrency && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatMoney(Number(expense.amount), expense.currency || "BRL")}
+                        </p>
+                      )}
                       <span className={`text-xs px-2 py-0.5 rounded-full ${expense.paid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
                         {expense.paid ? t("finances.paid") : t("finances.pending")}
                       </span>
