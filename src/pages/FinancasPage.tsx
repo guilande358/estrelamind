@@ -25,20 +25,28 @@ const categoryIcons: Record<string, string> = {
 const FinancasPage = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { data: profile } = useProfile();
+  const targetCurrency = profile?.preferred_currency || "BRL";
+  const { data: rates } = useExchangeRates("USD");
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [formOpen, setFormOpen] = useState(false);
 
   const { data: expenses = [], createExpense, deleteExpense, togglePaid } = useExpenses({ month: currentMonth });
 
+  // Convert each expense to target currency
+  const convertedExpenses = expenses.map((e) => ({
+    ...e,
+    convertedAmount: convert(Number(e.amount), e.currency || "BRL", targetCurrency, rates),
+  }));
+
   // Calculate stats
-  const totalSpent = expenses.reduce((acc, e) => acc + Number(e.amount), 0);
-  const paidExpenses = expenses.filter((e) => e.paid);
-  const unpaidExpenses = expenses.filter((e) => !e.paid);
+  const totalSpent = convertedExpenses.reduce((acc, e) => acc + e.convertedAmount, 0);
 
   // Group by category
-  const byCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+  const byCategory = convertedExpenses.reduce<Record<string, number>>((acc, e) => {
     const cat = e.category || "outros";
-    acc[cat] = (acc[cat] || 0) + Number(e.amount);
+    acc[cat] = (acc[cat] || 0) + e.convertedAmount;
     return acc;
   }, {});
 
