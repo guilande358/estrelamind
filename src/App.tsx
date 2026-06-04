@@ -22,6 +22,7 @@ import FinancasPage from "./pages/FinancasPage";
 import OffloadPage from "./pages/OffloadPage";
 import PerfilPage from "./pages/PerfilPage";
 import PremiumPage from "./pages/PremiumPage";
+import ReportsPage from "./pages/ReportsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
