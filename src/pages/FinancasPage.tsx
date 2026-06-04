@@ -127,7 +127,7 @@ const FinancasPage = () => {
           <p className="text-muted-foreground text-sm text-center py-6">Nenhuma despesa este mês</p>
         ) : (
           <div className="space-y-3">
-            {expenses.map((expense) => (
+            {convertedExpenses.map((expense) => (
               <Card key={expense.id} className="shadow-card border-0">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -144,7 +144,12 @@ const FinancasPage = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      <p className="font-semibold text-foreground">R$ {Number(expense.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                      <p className="font-semibold text-foreground">{formatMoney(expense.convertedAmount, targetCurrency)}</p>
+                      {(expense.currency || "BRL") !== targetCurrency && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatMoney(Number(expense.amount), expense.currency || "BRL")}
+                        </p>
+                      )}
                       <span className={`text-xs px-2 py-0.5 rounded-full ${expense.paid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
                         {expense.paid ? t("finances.paid") : t("finances.pending")}
                       </span>
