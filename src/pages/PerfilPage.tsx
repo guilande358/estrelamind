@@ -243,6 +243,62 @@ const PerfilPage = () => {
               </DialogContent>
             </Dialog>
 
+            {/* Currency */}
+            <Dialog open={currencyDialogOpen} onOpenChange={setCurrencyDialogOpen}>
+              <DialogTrigger asChild>
+                <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Moeda</p>
+                      <p className="text-sm text-muted-foreground">
+                        {profile?.preferred_currency || "BRL"}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-sm max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Moeda preferida</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-1">
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <button
+                      key={c.code}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
+                        (profile?.preferred_currency || "BRL") === c.code ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      }`}
+                      onClick={() => {
+                        updateProfile.mutate({ preferred_currency: c.code });
+                        setCurrencyDialogOpen(false);
+                      }}
+                    >
+                      <span className="font-medium">{c.code} — {c.name}</span>
+                      <span className="text-muted-foreground">{c.symbol}</span>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Reports */}
+            <div
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/relatorios")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-foreground">Relatórios e exportação</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
+
             {/* Privacy */}
             <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-3">
