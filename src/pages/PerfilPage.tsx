@@ -18,6 +18,7 @@ const PerfilPage = () => {
   const { t } = useTranslation();
   const { currentLanguage, setLanguage, supportedLanguages } = useLanguage();
   const [langDialogOpen, setLangDialogOpen] = useState(false);
+  const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { data: profile, updateProfile } = useProfile();
   const { theme, toggleTheme } = useTheme();
