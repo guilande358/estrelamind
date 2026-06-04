@@ -64,10 +64,15 @@ const FinancasPage = () => {
       <header className="px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">{t("finances.title")}</h1>
-          <Button size="sm" className="gradient-calm text-white border-0" onClick={() => setFormOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            {t("finances.add")}
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => navigate("/relatorios")}>
+              <BarChart3 className="w-4 h-4" />
+            </Button>
+            <Button size="sm" className="gradient-calm text-white border-0" onClick={() => setFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              {t("finances.add")}
+            </Button>
+          </div>
         </div>
       </header>
 
