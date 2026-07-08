@@ -139,8 +139,11 @@ export type Database = {
           id: string
           is_premium: boolean | null
           language: string | null
+          login_count: number
           mode: string | null
+          offload_count: number
           preferred_currency: string
+          premium_until: string | null
           updated_at: string
           user_id: string
         }
@@ -151,8 +154,11 @@ export type Database = {
           id?: string
           is_premium?: boolean | null
           language?: string | null
+          login_count?: number
           mode?: string | null
+          offload_count?: number
           preferred_currency?: string
+          premium_until?: string | null
           updated_at?: string
           user_id: string
         }
@@ -163,8 +169,11 @@ export type Database = {
           id?: string
           is_premium?: boolean | null
           language?: string | null
+          login_count?: number
           mode?: string | null
+          offload_count?: number
           preferred_currency?: string
+          premium_until?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -217,7 +226,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_offload_quota: { Args: never; Returns: Json }
+      tick_login: { Args: never; Returns: Json }
     }
     Enums: {
       [_ in never]: never
