@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.offload-process]
 verify_jwt = false
+
+[functions.paysuite-webhook]
+verify_jwt = false
