@@ -10,6 +10,9 @@ export interface Profile {
   mode: string | null;
   language: string | null;
   is_premium: boolean | null;
+  premium_until: string | null;
+  offload_count: number | null;
+  login_count: number | null;
   preferred_currency: string | null;
   created_at: string;
   updated_at: string;

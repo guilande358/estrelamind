@@ -97,7 +97,7 @@ const PremiumPage = () => {
         {/* Yearly */}
         <Card
           className="border-2 border-primary cursor-pointer hover:shadow-md transition-shadow relative"
-          onClick={() => openCheckout(PREMIUM_YEARLY_PRICE_ID)}
+          onClick={() => openCheckout("yearly")}
         >
           <Badge className="absolute -top-2.5 left-4 bg-primary text-primary-foreground text-xs">
             {t("premium.bestValue")}
@@ -113,7 +113,10 @@ const PremiumPage = () => {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-primary">{t("premium.yearlyPrice")}</p>
+                <p className="text-2xl font-bold text-primary flex items-center gap-2 justify-end">
+                  {loadingPlan === "yearly" && <Loader2 className="w-4 h-4 animate-spin" />}
+                  2.990 MT
+                </p>
                 <p className="text-xs text-muted-foreground">{t("premium.perYear")}</p>
               </div>
             </div>
@@ -126,7 +129,7 @@ const PremiumPage = () => {
         {/* Monthly */}
         <Card
           className="border cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => openCheckout(PREMIUM_MONTHLY_PRICE_ID)}
+          onClick={() => openCheckout("monthly")}
         >
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
