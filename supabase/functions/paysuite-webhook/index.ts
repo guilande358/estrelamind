@@ -3,23 +3,33 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-paysuite-signature",
+    "authorization, x-client-info, apikey, content-type, x-webhook-signature, x-account-id",
 };
 
-async function verifySignature(rawBody: string, sigHeader: string | null, secret: string): Promise<boolean> {
-  if (!sigHeader || !secret) return false;
+async function hmacSha256Hex(payload: string, secret: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(rawBody));
-  const computed = Array.from(new Uint8Array(sig))
-    .map((b) => b.toString(16).padStart(2, "0")).join("");
-  // constant-time compare
-  if (computed.length !== sigHeader.length) return false;
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
   let diff = 0;
-  for (let i = 0; i < computed.length; i++) diff |= computed.charCodeAt(i) ^ sigHeader.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+// Reference format: <uuid-no-dashes(32)><M|Y><base36 ts>
+function parseReference(reference?: string): { userId?: string; plan: string } {
+  if (!reference || reference.length < 33) return { plan: "monthly" };
+  const uid32 = reference.slice(0, 32);
+  if (!/^[0-9a-f]{32}$/i.test(uid32)) return { plan: "monthly" };
+  const userId = `${uid32.slice(0, 8)}-${uid32.slice(8, 12)}-${uid32.slice(12, 16)}-${uid32.slice(16, 20)}-${uid32.slice(20)}`;
+  const plan = reference[32] === "Y" ? "yearly" : "monthly";
+  return { userId, plan };
 }
 
 Deno.serve(async (req) => {
@@ -29,12 +39,13 @@ Deno.serve(async (req) => {
     const rawBody = await req.text();
     const secret = Deno.env.get("PAYSUITE_WEBHOOK_SECRET");
     const apiKey = Deno.env.get("PAYSUITE_API_KEY");
-    const sigHeader = req.headers.get("x-paysuite-signature") || req.headers.get("x-signature");
+    const sigHeader = req.headers.get("x-webhook-signature");
 
-    // Signature check only when Paysuite actually sends one (Paysuite may only issue an API token)
+    let signatureVerified = false;
     if (secret && sigHeader) {
-      const ok = await verifySignature(rawBody, sigHeader, secret);
-      if (!ok) {
+      const computed = await hmacSha256Hex(rawBody, secret);
+      signatureVerified = timingSafeEqual(computed, sigHeader.trim().toLowerCase());
+      if (!signatureVerified) {
         console.warn("[paysuite-webhook] invalid signature");
         return json({ error: "Invalid signature" }, 400);
       }
@@ -43,73 +54,61 @@ Deno.serve(async (req) => {
     const body = safeJson(rawBody);
     if (!body) return json({ error: "Invalid body" }, 400);
 
-    const event = body.event || body.type || body.status;
-    const data = body.data || body;
-    const reference: string | undefined = data.reference || data.metadata?.reference || body.reference;
-    const metadata = data.metadata || body.metadata || {};
-    const paymentId: string | undefined = data.id || data.payment_id || body.id;
+    const event = String(body.event || "");
+    const data = body.data || {};
+    const paymentId: string | undefined = data.id;
+    const reference: string | undefined = data.reference;
+    const requestId: string | undefined = body.request_id;
 
-    console.log("[paysuite-webhook] event:", event, "reference:", reference, "payment:", paymentId);
+    console.log("[paysuite-webhook]", { event, reference, paymentId, requestId, signatureVerified });
 
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    // Parse reference "userId:plan:ts" (fallback to metadata.user_id)
-    let userId = metadata.user_id as string | undefined;
-    let plan = (metadata.plan as string) || "monthly";
-    if (reference && reference.includes(":")) {
-      const parts = reference.split(":");
-      if (!userId) userId = parts[0];
-      if (parts[1]) plan = parts[1];
+    if (event === "payment.failed") {
+      console.log("[paysuite-webhook] payment failed:", data.error);
+      return json({ received: true });
+    }
+    if (event !== "payment.success") {
+      return json({ received: true, ignored: true });
     }
 
+    const { userId, plan } = parseReference(reference);
     if (!userId) {
-      console.warn("[paysuite-webhook] no user_id, ignoring");
+      console.warn("[paysuite-webhook] unable to resolve user from reference", reference);
       return json({ received: true });
     }
 
-    let success = ["payment.success", "success", "completed", "paid"].includes(String(event));
-    const failed = ["payment.failed", "failed", "cancelled"].includes(String(event));
-
-    // Without an HMAC secret the webhook body is untrusted: confirm the payment
-    // server-to-server against Paysuite before granting Premium.
-    if (success && (!secret || !sigHeader)) {
+    // Without a verified HMAC signature, confirm server-to-server before granting Premium
+    if (!signatureVerified) {
       if (!apiKey || !paymentId) {
-        console.warn("[paysuite-webhook] cannot verify payment (missing api key or payment id) — ignoring");
+        console.warn("[paysuite-webhook] cannot verify payment — ignoring");
         return json({ received: true, verified: false });
       }
       const verifyRes = await fetch(`https://paysuite.tech/api/v1/payments/${paymentId}`, {
         headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
       });
       const verifyBody = safeJson(await verifyRes.text());
-      const status = String(
-        verifyBody?.data?.status || verifyBody?.status || "",
-      ).toLowerCase();
-      const verified = verifyRes.ok && ["success", "paid", "completed"].includes(status);
-      console.log("[paysuite-webhook] verification:", verifyRes.status, status, verified);
-      if (!verified) {
-        success = false;
-        return json({ received: true, verified: false });
-      }
+      const status = String(verifyBody?.data?.status || "").toLowerCase();
+      const ok = verifyRes.ok && ["paid", "success", "completed"].includes(status);
+      console.log("[paysuite-webhook] verification:", verifyRes.status, status, ok);
+      if (!ok) return json({ received: true, verified: false });
     }
 
-    if (success) {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
-      const days = plan === "yearly" ? 365 : 30;
-      const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_premium: true, premium_until: until, offload_count: 0 })
-        .eq("user_id", userId);
-      if (error) console.error("[paysuite-webhook] update err", error);
-      console.log("[paysuite-webhook] activated premium", userId, "until", until);
-    } else if (failed) {
-      console.log("[paysuite-webhook] payment failed for", userId, "— no changes");
+    const days = plan === "yearly" ? 365 : 30;
+    const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_premium: true, premium_until: until, offload_count: 0 })
+      .eq("user_id", userId);
+    if (error) {
+      console.error("[paysuite-webhook] update err", error);
+      return json({ error: "Update failed" }, 500);
     }
 
+    console.log("[paysuite-webhook] premium activated", userId, plan, until);
     return json({ received: true });
   } catch (e) {
     console.error("[paysuite-webhook] error", e);
