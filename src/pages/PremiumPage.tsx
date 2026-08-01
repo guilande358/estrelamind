@@ -141,7 +141,10 @@ const PremiumPage = () => {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-foreground">{t("premium.monthlyPrice")}</p>
+                <p className="text-2xl font-bold text-foreground flex items-center gap-2 justify-end">
+                  {loadingPlan === "monthly" && <Loader2 className="w-4 h-4 animate-spin" />}
+                  299 MT
+                </p>
                 <p className="text-xs text-muted-foreground">{t("premium.perMonth")}</p>
               </div>
             </div>
