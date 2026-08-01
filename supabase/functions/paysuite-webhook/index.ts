@@ -28,10 +28,11 @@ Deno.serve(async (req) => {
   try {
     const rawBody = await req.text();
     const secret = Deno.env.get("PAYSUITE_WEBHOOK_SECRET");
+    const apiKey = Deno.env.get("PAYSUITE_API_KEY");
     const sigHeader = req.headers.get("x-paysuite-signature") || req.headers.get("x-signature");
 
-    // Only enforce signature check if a secret is configured (allows Paysuite dashboards without HMAC to still work)
-    if (secret) {
+    // Signature check only when Paysuite actually sends one (Paysuite may only issue an API token)
+    if (secret && sigHeader) {
       const ok = await verifySignature(rawBody, sigHeader, secret);
       if (!ok) {
         console.warn("[paysuite-webhook] invalid signature");
@@ -46,8 +47,10 @@ Deno.serve(async (req) => {
     const data = body.data || body;
     const reference: string | undefined = data.reference || data.metadata?.reference || body.reference;
     const metadata = data.metadata || body.metadata || {};
+    const paymentId: string | undefined = data.id || data.payment_id || body.id;
 
-    console.log("[paysuite-webhook] event:", event, "reference:", reference);
+    console.log("[paysuite-webhook] event:", event, "reference:", reference, "payment:", paymentId);
+
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -68,10 +71,33 @@ Deno.serve(async (req) => {
       return json({ received: true });
     }
 
-    const success = ["payment.success", "success", "completed", "paid"].includes(String(event));
+    let success = ["payment.success", "success", "completed", "paid"].includes(String(event));
     const failed = ["payment.failed", "failed", "cancelled"].includes(String(event));
 
+    // Without an HMAC secret the webhook body is untrusted: confirm the payment
+    // server-to-server against Paysuite before granting Premium.
+    if (success && (!secret || !sigHeader)) {
+      if (!apiKey || !paymentId) {
+        console.warn("[paysuite-webhook] cannot verify payment (missing api key or payment id) — ignoring");
+        return json({ received: true, verified: false });
+      }
+      const verifyRes = await fetch(`https://paysuite.tech/api/v1/payments/${paymentId}`, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      });
+      const verifyBody = safeJson(await verifyRes.text());
+      const status = String(
+        verifyBody?.data?.status || verifyBody?.status || "",
+      ).toLowerCase();
+      const verified = verifyRes.ok && ["success", "paid", "completed"].includes(status);
+      console.log("[paysuite-webhook] verification:", verifyRes.status, status, verified);
+      if (!verified) {
+        success = false;
+        return json({ received: true, verified: false });
+      }
+    }
+
     if (success) {
+
       const days = plan === "yearly" ? 365 : 30;
       const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
       const { error } = await supabase
