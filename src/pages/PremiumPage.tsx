@@ -1,68 +1,44 @@
-import { Crown, Check, Sparkles, Zap, Shield, Volume2, FileText, Headphones } from "lucide-react";
+import { useState } from "react";
+import { Crown, Check, Sparkles, Volume2, FileText, Headphones, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "react-i18next";
-import { usePaddle } from "@/hooks/usePaddle";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
-// Paddle Price IDs (production) — confirmed in Paddle dashboard
-const PREMIUM_YEARLY_PRICE_ID = "pri_01kjt54b506e1mgs7k17xey4mv"; // $40/year, 7-day trial
-const PREMIUM_MONTHLY_PRICE_ID = "pri_01kjt4zkpq67hspzfke0bdearz"; // $4.99/month, 14-day trial
-
-const localeMap: Record<string, string> = {
-  "pt-BR": "pt",
-  "en-US": "en",
-  "fr-FR": "fr",
-  "es-ES": "es",
-};
-
 const PremiumPage = () => {
-  const { t, i18n } = useTranslation();
-  const paddle = usePaddle();
-  const { user } = useAuth();
+  const { t } = useTranslation();
   const { data: profile } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const isPremium = profile?.is_premium;
+  const isPremium = profile?.is_premium && (!profile?.premium_until || new Date(profile.premium_until) > new Date());
 
-  const openCheckout = (priceId: string) => {
-    if (!priceId) {
-      toast({ title: "Plano indisponível", variant: "destructive" });
-      return;
-    }
-    if (!paddle) {
-      toast({
-        title: t("premium.loading") || "Carregando pagamento…",
-        description: "Aguarde alguns segundos e tente novamente.",
-      });
-      return;
-    }
+  const openCheckout = async (plan: "monthly" | "yearly") => {
+    if (loadingPlan) return;
+    setLoadingPlan(plan);
     try {
-      console.log("[Paddle] Opening checkout for", priceId);
-      paddle.Checkout.open({
-        items: [{ priceId, quantity: 1 }],
-        customer: user?.email ? { email: user.email } : undefined,
-        settings: {
-          displayMode: "overlay",
-          theme: "light",
-          locale: localeMap[i18n.language] || "en",
-          successUrl: `${window.location.origin}/perfil?upgraded=true`,
-        },
+      const { data, error } = await supabase.functions.invoke("paysuite-create-checkout", {
+        body: { plan, return_url: `${window.location.origin}/perfil?upgraded=true` },
       });
+      if (error) throw error;
+      if (!data?.checkout_url) throw new Error(data?.error || "Checkout indisponível");
+      window.location.href = data.checkout_url;
     } catch (err) {
-      console.error("[Paddle] Checkout open failed:", err);
+      console.error("[Paysuite] checkout failed:", err);
       toast({
-        title: "Erro ao abrir checkout",
+        title: "Erro ao abrir pagamento",
         description: err instanceof Error ? err.message : "Tente novamente.",
         variant: "destructive",
       });
+      setLoadingPlan(null);
     }
   };
+
 
   const features = [
     { icon: Sparkles, text: t("premium.feature1") },
@@ -121,7 +97,7 @@ const PremiumPage = () => {
         {/* Yearly */}
         <Card
           className="border-2 border-primary cursor-pointer hover:shadow-md transition-shadow relative"
-          onClick={() => openCheckout(PREMIUM_YEARLY_PRICE_ID)}
+          onClick={() => openCheckout("yearly")}
         >
           <Badge className="absolute -top-2.5 left-4 bg-primary text-primary-foreground text-xs">
             {t("premium.bestValue")}
@@ -137,7 +113,10 @@ const PremiumPage = () => {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-primary">{t("premium.yearlyPrice")}</p>
+                <p className="text-2xl font-bold text-primary flex items-center gap-2 justify-end">
+                  {loadingPlan === "yearly" && <Loader2 className="w-4 h-4 animate-spin" />}
+                  2.990 MT
+                </p>
                 <p className="text-xs text-muted-foreground">{t("premium.perYear")}</p>
               </div>
             </div>
@@ -150,7 +129,7 @@ const PremiumPage = () => {
         {/* Monthly */}
         <Card
           className="border cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => openCheckout(PREMIUM_MONTHLY_PRICE_ID)}
+          onClick={() => openCheckout("monthly")}
         >
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
@@ -162,7 +141,10 @@ const PremiumPage = () => {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-foreground">{t("premium.monthlyPrice")}</p>
+                <p className="text-2xl font-bold text-foreground flex items-center gap-2 justify-end">
+                  {loadingPlan === "monthly" && <Loader2 className="w-4 h-4 animate-spin" />}
+                  299 MT
+                </p>
                 <p className="text-xs text-muted-foreground">{t("premium.perMonth")}</p>
               </div>
             </div>
