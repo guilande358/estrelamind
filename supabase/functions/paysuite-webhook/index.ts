@@ -71,10 +71,33 @@ Deno.serve(async (req) => {
       return json({ received: true });
     }
 
-    const success = ["payment.success", "success", "completed", "paid"].includes(String(event));
+    let success = ["payment.success", "success", "completed", "paid"].includes(String(event));
     const failed = ["payment.failed", "failed", "cancelled"].includes(String(event));
 
+    // Without an HMAC secret the webhook body is untrusted: confirm the payment
+    // server-to-server against Paysuite before granting Premium.
+    if (success && (!secret || !sigHeader)) {
+      if (!apiKey || !paymentId) {
+        console.warn("[paysuite-webhook] cannot verify payment (missing api key or payment id) — ignoring");
+        return json({ received: true, verified: false });
+      }
+      const verifyRes = await fetch(`https://paysuite.tech/api/v1/payments/${paymentId}`, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      });
+      const verifyBody = safeJson(await verifyRes.text());
+      const status = String(
+        verifyBody?.data?.status || verifyBody?.status || "",
+      ).toLowerCase();
+      const verified = verifyRes.ok && ["success", "paid", "completed"].includes(status);
+      console.log("[paysuite-webhook] verification:", verifyRes.status, status, verified);
+      if (!verified) {
+        success = false;
+        return json({ received: true, verified: false });
+      }
+    }
+
     if (success) {
+
       const days = plan === "yearly" ? 365 : 30;
       const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
       const { error } = await supabase
