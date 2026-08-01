@@ -28,10 +28,11 @@ Deno.serve(async (req) => {
   try {
     const rawBody = await req.text();
     const secret = Deno.env.get("PAYSUITE_WEBHOOK_SECRET");
+    const apiKey = Deno.env.get("PAYSUITE_API_KEY");
     const sigHeader = req.headers.get("x-paysuite-signature") || req.headers.get("x-signature");
 
-    // Only enforce signature check if a secret is configured (allows Paysuite dashboards without HMAC to still work)
-    if (secret) {
+    // Signature check only when Paysuite actually sends one (Paysuite may only issue an API token)
+    if (secret && sigHeader) {
       const ok = await verifySignature(rawBody, sigHeader, secret);
       if (!ok) {
         console.warn("[paysuite-webhook] invalid signature");
@@ -46,8 +47,10 @@ Deno.serve(async (req) => {
     const data = body.data || body;
     const reference: string | undefined = data.reference || data.metadata?.reference || body.reference;
     const metadata = data.metadata || body.metadata || {};
+    const paymentId: string | undefined = data.id || data.payment_id || body.id;
 
-    console.log("[paysuite-webhook] event:", event, "reference:", reference);
+    console.log("[paysuite-webhook] event:", event, "reference:", reference, "payment:", paymentId);
+
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
