@@ -6,8 +6,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Prices in MZN (Paysuite is MZN-native)
-const PLAN_PRICES: Record<string, { amount: number; label: string }> = {
+// Preços em MZN (PaySuite é nativo em MZN)
+const PLANS: Record<string, { amount: number; label: string }> = {
   monthly: { amount: 299, label: "MindFlow Premium - Mensal" },
   yearly: { amount: 2990, label: "MindFlow Premium - Anual" },
 };
@@ -34,58 +34,52 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const plan = String(body.plan || "monthly");
     const returnUrl = typeof body.return_url === "string" ? body.return_url : "";
-    const method = ["mpesa", "emola", "credit_card"].includes(String(body.method))
-      ? String(body.method)
-      : undefined;
 
-    const cfg = PLAN_PRICES[plan];
+    const cfg = PLANS[plan];
     if (!cfg) return json({ error: "Invalid plan" }, 400);
 
-    const PAYSUITE_API_KEY = Deno.env.get("PAYSUITE_API_KEY");
-    if (!PAYSUITE_API_KEY) return json({ error: "Paysuite not configured" }, 500);
+    const apiKey = Deno.env.get("PAYSUITE_API_KEY");
+    if (!apiKey) return json({ error: "PaySuite não configurada" }, 500);
 
-    // reference max 50 chars: uuid without dashes (32) + plan flag + short timestamp
+    // reference ≤ 50 chars: <uuid sem hífens (32)><M|Y><timestamp base36>
     const uid32 = userId.replace(/-/g, "");
     const planFlag = plan === "yearly" ? "Y" : "M";
-    const shortTs = Date.now().toString(36); // ~8 chars
-    const reference = `${uid32}${planFlag}${shortTs}`.slice(0, 50);
-
-    const callbackUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/paysuite-webhook`;
+    const reference = `${uid32}${planFlag}${Date.now().toString(36)}`.slice(0, 50);
 
     const payload: Record<string, unknown> = {
       amount: cfg.amount.toFixed(2),
       reference,
       description: cfg.label.slice(0, 125),
-      callback_url: callbackUrl,
+      callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/paysuite-webhook`,
     };
-    if (method) payload.method = method;
+    // Sem `method`: o cliente escolhe M-Pesa / e-Mola / cartão no checkout da PaySuite
     if (returnUrl) payload.return_url = returnUrl;
 
     console.log("[paysuite-create-checkout] creating payment", { plan, userId, reference });
 
-    const psRes = await fetch("https://paysuite.tech/api/v1/payments", {
+    const res = await fetch("https://paysuite.tech/api/v1/payments", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${PAYSUITE_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
       body: JSON.stringify(payload),
     });
 
-    const psText = await psRes.text();
-    const parsed = safeJson(psText);
+    const text = await res.text();
+    const parsed = safeJson(text);
 
-    if (!psRes.ok || parsed?.status === "error") {
-      console.error("[paysuite] error", psRes.status, psText);
-      // Return 200 so the client can read the real Paysuite message
-      return json({ error: parsed?.message || "Paysuite request failed", provider_status: psRes.status });
+    if (!res.ok || parsed?.status === "error") {
+      console.error("[paysuite] error", res.status, text);
+      // 200 para que o cliente consiga ler a mensagem real da PaySuite
+      return json({ error: parsed?.message || "Falha na requisição à PaySuite", provider_status: res.status });
     }
 
     const checkoutUrl = parsed?.data?.checkout_url;
     if (!checkoutUrl) {
-      console.error("[paysuite] no checkout_url", psText);
-      return json({ error: "Paysuite did not return a checkout URL" });
+      console.error("[paysuite] no checkout_url", text);
+      return json({ error: "PaySuite não retornou uma URL de checkout" });
     }
 
     return json({ checkout_url: checkoutUrl, reference, payment_id: parsed?.data?.id });
