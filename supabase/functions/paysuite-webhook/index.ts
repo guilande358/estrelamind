@@ -22,14 +22,13 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-// Reference format: <uuid-no-dashes(32)><M|Y><base36 ts>
+// reference: <uuid sem hífens (32)><M|Y><base36 ts>
 function parseReference(reference?: string): { userId?: string; plan: string } {
   if (!reference || reference.length < 33) return { plan: "monthly" };
   const uid32 = reference.slice(0, 32);
   if (!/^[0-9a-f]{32}$/i.test(uid32)) return { plan: "monthly" };
   const userId = `${uid32.slice(0, 8)}-${uid32.slice(8, 12)}-${uid32.slice(12, 16)}-${uid32.slice(16, 20)}-${uid32.slice(20)}`;
-  const plan = reference[32] === "Y" ? "yearly" : "monthly";
-  return { userId, plan };
+  return { userId, plan: reference[32] === "Y" ? "yearly" : "monthly" };
 }
 
 Deno.serve(async (req) => {
@@ -58,25 +57,22 @@ Deno.serve(async (req) => {
     const data = body.data || {};
     const paymentId: string | undefined = data.id;
     const reference: string | undefined = data.reference;
-    const requestId: string | undefined = body.request_id;
 
-    console.log("[paysuite-webhook]", { event, reference, paymentId, requestId, signatureVerified });
+    console.log("[paysuite-webhook]", { event, reference, paymentId, signatureVerified });
 
     if (event === "payment.failed") {
       console.log("[paysuite-webhook] payment failed:", data.error);
       return json({ received: true });
     }
-    if (event !== "payment.success") {
-      return json({ received: true, ignored: true });
-    }
+    if (event !== "payment.success") return json({ received: true, ignored: true });
 
     const { userId, plan } = parseReference(reference);
     if (!userId) {
-      console.warn("[paysuite-webhook] unable to resolve user from reference", reference);
+      console.warn("[paysuite-webhook] cannot resolve user from reference", reference);
       return json({ received: true });
     }
 
-    // Without a verified HMAC signature, confirm server-to-server before granting Premium
+    // Sem assinatura HMAC verificada: confirmar server-to-server antes de ativar Premium
     if (!signatureVerified) {
       if (!apiKey || !paymentId) {
         console.warn("[paysuite-webhook] cannot verify payment — ignoring");
@@ -87,7 +83,7 @@ Deno.serve(async (req) => {
       });
       const verifyBody = safeJson(await verifyRes.text());
       const status = String(verifyBody?.data?.status || "").toLowerCase();
-      const ok = verifyRes.ok && ["paid", "success", "completed"].includes(status);
+      const ok = verifyRes.ok && status === "paid";
       console.log("[paysuite-webhook] verification:", verifyRes.status, status, ok);
       if (!ok) return json({ received: true, verified: false });
     }
