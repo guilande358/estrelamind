@@ -25,7 +25,7 @@ const PremiumPage = () => {
       const { data, error } = await supabase.functions.invoke("paysuite-create-checkout", {
         body: { plan, return_url: `${window.location.origin}/perfil?upgraded=true` },
       });
-      if (error) throw error;
+      if (error && !data?.error) throw error;
       if (!data?.checkout_url) throw new Error(data?.error || "Checkout indisponível");
       window.location.href = data.checkout_url;
     } catch (err) {

@@ -78,13 +78,14 @@ Deno.serve(async (req) => {
 
     if (!psRes.ok || parsed?.status === "error") {
       console.error("[paysuite] error", psRes.status, psText);
-      return json({ error: parsed?.message || "Paysuite request failed" }, 502);
+      // Return 200 so the client can read the real Paysuite message
+      return json({ error: parsed?.message || "Paysuite request failed", provider_status: psRes.status });
     }
 
     const checkoutUrl = parsed?.data?.checkout_url;
     if (!checkoutUrl) {
       console.error("[paysuite] no checkout_url", psText);
-      return json({ error: "Paysuite did not return a checkout URL" }, 502);
+      return json({ error: "Paysuite did not return a checkout URL" });
     }
 
     return json({ checkout_url: checkoutUrl, reference, payment_id: parsed?.data?.id });
