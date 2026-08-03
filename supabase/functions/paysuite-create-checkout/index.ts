@@ -38,7 +38,9 @@ Deno.serve(async (req) => {
     const cfg = PLANS[plan];
     if (!cfg) return json({ error: "Invalid plan" }, 400);
 
-    const apiKey = Deno.env.get("PAYSUITE_API_KEY");
+    const rawKey = Deno.env.get("PAYSUITE_API_KEY") ?? "";
+    // remove espaços/quebras e um eventual prefixo "Bearer " colado junto ao token
+    const apiKey = rawKey.trim().replace(/\s+/g, "").replace(/^Bearer/i, "");
     if (!apiKey) return json({ error: "PaySuite não configurada" }, 500);
 
     // reference ≤ 50 chars: <uuid sem hífens (32)><M|Y><timestamp base36>
