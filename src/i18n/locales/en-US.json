@@ -27,8 +27,29 @@
     "title": "Calendar",
     "new": "New",
     "todayEvents": "Today's Events",
-    "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    "weekDays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "weekDays": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
     "categories": {
       "work": "work",
       "family": "family",
@@ -190,17 +211,29 @@
       "professional": {
         "name": "Professional",
         "description": "For those who work and need to organize meetings, projects and deadlines",
-        "features": ["Meetings and projects", "Deadlines and deliveries", "Work expenses"]
+        "features": [
+          "Meetings and projects",
+          "Deadlines and deliveries",
+          "Work expenses"
+        ]
       },
       "student": {
         "name": "Student",
         "description": "For those who study and need to manage classes, assignments and exams",
-        "features": ["Class schedules", "Assignments and exams", "Study goals"]
+        "features": [
+          "Class schedules",
+          "Assignments and exams",
+          "Study goals"
+        ]
       },
       "family": {
         "name": "Family",
         "description": "For those who take care of a family and need to coordinate activities",
-        "features": ["Shared calendar", "Family expenses", "Household tasks"]
+        "features": [
+          "Shared calendar",
+          "Family expenses",
+          "Household tasks"
+        ]
       }
     }
   },
@@ -230,6 +263,30 @@
     "isPremiumSub": "Enjoy all exclusive features.",
     "backToProfile": "Back to profile",
     "perMonth": "/mo",
-    "perYear": "/yr"
+    "perYear": "/yr",
+    "copied": "Copied",
+    "fillAll": "Fill in phone and transaction ID",
+    "submitted": "Proof submitted",
+    "submittedSub": "We'll verify and activate your Premium shortly.",
+    "submitError": "Failed to submit proof",
+    "payTitle": "Pay with M-Pesa or e-Mola",
+    "sendTo": "Send to",
+    "amount": "Amount",
+    "reference": "Reference",
+    "referenceHint": "Use this reference in the transfer description.",
+    "payerPhone": "Your paying phone number",
+    "transactionId": "Transaction ID (confirmation SMS)",
+    "proof": "Proof",
+    "attachProof": "Attach proof image",
+    "submitProof": "Submit proof",
+    "pendingTitle": "Payment under review",
+    "pendingSub": "Once confirmed, Premium is activated automatically.",
+    "rejectedTitle": "Last request rejected",
+    "validUntil": "Valid until",
+    "howTitle": "How it works",
+    "how1": "Transfer the amount to M-Pesa {{mpesa}} or e-Mola {{emola}}.",
+    "how2": "Submit the proof and transaction ID in the form.",
+    "how3": "We verify manually and activate your Premium.",
+    "manualNotice": "Manual payment verified by the MindFlow team."
   }
 }
