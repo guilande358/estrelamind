@@ -27,8 +27,29 @@
     "title": "Agenda",
     "new": "Nouveau",
     "todayEvents": "Événements d'Aujourd'hui",
-    "months": ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
-    "weekDays": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+    "months": [
+      "Janvier",
+      "Février",
+      "Mars",
+      "Avril",
+      "Mai",
+      "Juin",
+      "Juillet",
+      "Août",
+      "Septembre",
+      "Octobre",
+      "Novembre",
+      "Décembre"
+    ],
+    "weekDays": [
+      "Dim",
+      "Lun",
+      "Mar",
+      "Mer",
+      "Jeu",
+      "Ven",
+      "Sam"
+    ],
     "categories": {
       "work": "travail",
       "family": "famille",
@@ -190,17 +211,29 @@
       "professional": {
         "name": "Professionnel",
         "description": "Pour ceux qui travaillent et ont besoin d'organiser réunions, projets et délais",
-        "features": ["Réunions et projets", "Délais et livrables", "Dépenses de travail"]
+        "features": [
+          "Réunions et projets",
+          "Délais et livrables",
+          "Dépenses de travail"
+        ]
       },
       "student": {
         "name": "Étudiant",
         "description": "Pour ceux qui étudient et ont besoin de gérer cours, travaux et examens",
-        "features": ["Horaires de cours", "Travaux et examens", "Objectifs d'études"]
+        "features": [
+          "Horaires de cours",
+          "Travaux et examens",
+          "Objectifs d'études"
+        ]
       },
       "family": {
         "name": "Famille",
         "description": "Pour ceux qui s'occupent d'une famille et coordonnent les activités",
-        "features": ["Agenda partagé", "Dépenses familiales", "Tâches ménagères"]
+        "features": [
+          "Agenda partagé",
+          "Dépenses familiales",
+          "Tâches ménagères"
+        ]
       }
     }
   },
@@ -230,6 +263,30 @@
     "isPremiumSub": "Profitez de toutes les fonctionnalités exclusives.",
     "backToProfile": "Retour au profil",
     "perMonth": "/mois",
-    "perYear": "/an"
+    "perYear": "/an",
+    "copied": "Copié",
+    "fillAll": "Renseignez le téléphone et l'ID de transaction",
+    "submitted": "Preuve envoyée",
+    "submittedSub": "Nous vérifierons et activerons votre Premium bientôt.",
+    "submitError": "Échec de l'envoi",
+    "payTitle": "Payer avec M-Pesa ou e-Mola",
+    "sendTo": "Envoyer à",
+    "amount": "Montant",
+    "reference": "Référence",
+    "referenceHint": "Utilisez cette référence dans la description du virement.",
+    "payerPhone": "Votre numéro de paiement",
+    "transactionId": "ID de transaction (SMS)",
+    "proof": "Justificatif",
+    "attachProof": "Joindre une image",
+    "submitProof": "Envoyer le justificatif",
+    "pendingTitle": "Paiement en vérification",
+    "pendingSub": "Une fois confirmé, le Premium est activé automatiquement.",
+    "rejectedTitle": "Dernière demande rejetée",
+    "validUntil": "Valable jusqu'au",
+    "howTitle": "Comment ça marche",
+    "how1": "Transférez le montant vers M-Pesa {{mpesa}} ou e-Mola {{emola}}.",
+    "how2": "Envoyez le justificatif et l'ID de transaction.",
+    "how3": "Nous vérifions manuellement et activons votre Premium.",
+    "manualNotice": "Paiement manuel vérifié par l'équipe MindFlow."
   }
 }
