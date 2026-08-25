@@ -48,6 +48,7 @@ const App = () => (
                 <Route path="/mode-select" element={<ModeSelectPage />} />
                 <Route path="/premium" element={<PremiumPage />} />
                 <Route path="/relatorios" element={<ReportsPage />} />
+                <Route path="/admin/pagamentos" element={<AdminPaymentsPage />} />
                 <Route element={<AppLayout />}>
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/agenda" element={<AgendaPage />} />
