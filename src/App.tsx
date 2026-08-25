@@ -23,6 +23,7 @@ import OffloadPage from "./pages/OffloadPage";
 import PerfilPage from "./pages/PerfilPage";
 import PremiumPage from "./pages/PremiumPage";
 import ReportsPage from "./pages/ReportsPage";
+import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
