@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
 
@@ -21,6 +22,7 @@ const PerfilPage = () => {
   const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { data: profile, updateProfile } = useProfile();
+  const { isAdmin } = useUserRole();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -284,6 +286,22 @@ const PerfilPage = () => {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Admin payments */}
+            {isAdmin && (
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate("/admin/pagamentos")}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium text-foreground">Pagamentos (admin)</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            )}
 
             {/* Reports */}
             <div
