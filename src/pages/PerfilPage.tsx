@@ -22,6 +22,7 @@ const PerfilPage = () => {
   const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { data: profile, updateProfile } = useProfile();
+  const { isAdmin } = useUserRole();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
