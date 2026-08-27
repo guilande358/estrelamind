@@ -285,6 +285,22 @@ const PerfilPage = () => {
               </DialogContent>
             </Dialog>
 
+            {/* Admin payments */}
+            {isAdmin && (
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate("/admin/pagamentos")}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium text-foreground">Pagamentos (admin)</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            )}
+
             {/* Reports */}
             <div
               className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors"
