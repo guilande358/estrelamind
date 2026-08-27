@@ -3,13 +3,13 @@
 export const PAYMENT_ACCOUNTS = {
   mpesa: {
     label: "M-Pesa",
-    number: "+258 84 000 0000",
-    holder: "MindFlow",
+    number: "+258 85 757 5335",
+    holder: "Elvez Ilidio Guilande",
   },
   emola: {
     label: "e-Mola",
-    number: "+258 86 000 0000",
-    holder: "MindFlow",
+    number: "+258 87 908 0335",
+    holder: "Elvez Ilidio Guilande",
   },
 } as const;
 
