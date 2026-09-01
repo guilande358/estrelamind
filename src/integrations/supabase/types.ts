@@ -304,15 +304,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_payment_request: { Args: { _request_id: string }; Returns: Json }
       consume_offload_quota: { Args: never; Returns: Json }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
       tick_login: { Args: never; Returns: Json }
     }
     Enums: {
