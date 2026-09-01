@@ -23,9 +23,10 @@ export const useAdminPayments = (status: string) => {
 
   const approve = useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase.rpc("approve_payment_request", {
-        _request_id: id,
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "admin-approve-payment",
+        { body: { request_id: id } }
+      );
       if (error) throw error;
       const result = data as { ok: boolean; error?: string };
       if (!result?.ok) throw new Error(result?.error || "Falha ao aprovar");
