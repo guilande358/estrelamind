@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell } from "lucide-react";
+import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell, PhoneCall } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { useVoiceCapture, AUTO_CREATE_WORDS, containsAny } from "@/contexts/Voic
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ConfirmationCard, { type AIItem } from "@/components/offload/ConfirmationCard";
+import AliceAgentSheet from "@/components/offload/AliceAgentSheet";
 import { cn } from "@/lib/utils";
 
 type Role = "user" | "assistant";
@@ -54,6 +55,7 @@ const OffloadPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [savingMsgId, setSavingMsgId] = useState<string | null>(null);
   const [resolvedMsgIds, setResolvedMsgIds] = useState<Set<string>>(new Set());
+  const [agentOpen, setAgentOpen] = useState(false);
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -266,6 +268,9 @@ const OffloadPage = () => {
           <p className="text-xs text-muted-foreground">{t("offload.chatSubtitle")}</p>
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setAgentOpen(true)} title={t("offload.agentStart", { defaultValue: "Falar com a Alice" })}>
+            <PhoneCall className="w-5 h-5 text-primary" />
+          </Button>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" onClick={readUnread} title={t("offload.readUnread")}>
               <Bell className="w-4 h-4" />
@@ -379,6 +384,8 @@ const OffloadPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <AliceAgentSheet open={agentOpen} onOpenChange={setAgentOpen} />
     </div>
   );
 };
