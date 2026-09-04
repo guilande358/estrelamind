@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useConversation } from "@elevenlabs/react";
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { useTranslation } from "react-i18next";
 import { Mic, PhoneOff, Loader2, Radio } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -19,7 +19,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const AliceAgentSheet = ({ open, onOpenChange }: Props) => {
+const AliceAgentSheetInner = ({ open, onOpenChange }: Props) => {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [lines, setLines] = useState<Line[]>([]);
@@ -173,5 +173,11 @@ const AliceAgentSheet = ({ open, onOpenChange }: Props) => {
     </Sheet>
   );
 };
+
+const AliceAgentSheet = (props: Props) => (
+  <ConversationProvider>
+    <AliceAgentSheetInner {...props} />
+  </ConversationProvider>
+);
 
 export default AliceAgentSheet;
