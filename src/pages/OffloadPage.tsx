@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ConfirmationCard, { type AIItem } from "@/components/offload/ConfirmationCard";
 import AliceAgentSheet from "@/components/offload/AliceAgentSheet";
+import VoiceAssistantSheet from "@/components/offload/VoiceAssistantSheet";
 import { cn } from "@/lib/utils";
 
 type Role = "user" | "assistant";
@@ -56,6 +57,7 @@ const OffloadPage = () => {
   const [savingMsgId, setSavingMsgId] = useState<string | null>(null);
   const [resolvedMsgIds, setResolvedMsgIds] = useState<Set<string>>(new Set());
   const [agentOpen, setAgentOpen] = useState(false);
+  const [ninaOpen, setNinaOpen] = useState(false);
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -168,7 +170,7 @@ const OffloadPage = () => {
     setResolvedMsgIds((prev) => new Set(prev).add(msgId));
   };
 
-  const handleSend = async (raw?: string) => {
+  const handleSend = async (raw?: string, opts?: { silent?: boolean }) => {
     const text = (raw ?? input).trim();
     if (!text || !user) return;
     setInput("");
@@ -211,7 +213,7 @@ const OffloadPage = () => {
       const items: AIItem[] = data?.items || [];
 
       const inserted = await insertMessage({ role: "assistant", content: response, items: items.length ? items : null, read: false });
-      speak(response);
+      if (!opts?.silent) speak(response);
 
       // Auto-create only when the user clearly asked for it
       if (items.length && containsAny(text, AUTO_CREATE_WORDS)) {
@@ -224,6 +226,8 @@ const OffloadPage = () => {
           variant: failed ? "destructive" : "default",
         });
       }
+
+      return response;
     } catch (e) {
       console.error("Process error", e);
       toast({ title: t("offload.errorProcess"), variant: "destructive" });
@@ -268,6 +272,9 @@ const OffloadPage = () => {
           <p className="text-xs text-muted-foreground">{t("offload.chatSubtitle")}</p>
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setNinaOpen(true)} title={t("offload.assistantStart", { defaultValue: "Falar com a Nina" })}>
+            <Sparkles className="w-5 h-5 text-primary" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setAgentOpen(true)} title={t("offload.agentStart", { defaultValue: "Falar com a Alice" })}>
             <PhoneCall className="w-5 h-5 text-primary" />
           </Button>
@@ -386,6 +393,11 @@ const OffloadPage = () => {
       </div>
 
       <AliceAgentSheet open={agentOpen} onOpenChange={setAgentOpen} />
+      <VoiceAssistantSheet
+        open={ninaOpen}
+        onOpenChange={setNinaOpen}
+        onSend={(text) => handleSend(text, { silent: true })}
+      />
     </div>
   );
 };
