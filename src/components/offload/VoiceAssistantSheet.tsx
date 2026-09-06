@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { STOP_WORDS, containsAny, stripTrailingStopWord } from "@/contexts/VoiceCaptureContext";
 import { cn } from "@/lib/utils";
 
 interface Line {
@@ -21,6 +22,26 @@ interface Props {
 }
 
 const SILENCE_MS = 1600;
+const WAKE_WORDS = ["alice", "alise", "alici", "ei alice", "hey alice", "ola alice", "oi alice"];
+
+/** Requests the real microphone and releases the stream right away. */
+const ensureMicrophone = async (): Promise<"ok" | "unsupported" | "notfound" | "denied"> => {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return "unsupported";
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices?.();
+    if (devices && devices.length && !devices.some((d) => d.kind === "audioinput")) return "notfound";
+  } catch {
+    /* enumerateDevices may fail before permission is granted — ignore */
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    return "ok";
+  } catch (e: any) {
+    if (e?.name === "NotFoundError" || e?.name === "OverconstrainedError") return "notfound";
+    return "denied";
+  }
+};
 
 const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
   const { t } = useTranslation();
@@ -31,6 +52,7 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
   const [lines, setLines] = useState<Line[]>([]);
   const [thinking, setThinking] = useState(false);
   const [active, setActive] = useState(false);
+  const [waking, setWaking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSentRef = useRef("");
@@ -67,30 +89,65 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
     [onSend, reset, stop, t, toast, tts]
   );
 
-  // Auto-send after a short silence
+  const end = useCallback(() => {
+    setActive(false);
+    setWaking(false);
+    stop();
+    reset();
+    tts.stop();
+  }, [reset, stop, tts]);
+
+  // Auto-send after a short silence, or immediately on a stop word
   useEffect(() => {
     if (!open || !active || busyRef.current) return;
-    const text = (transcript || "").trim();
-    if (!text || text === lastSentRef.current) return;
+    const raw = (transcript || "").trim();
+    if (!raw || raw === lastSentRef.current) return;
+
+    const hasStopWord = containsAny(raw, STOP_WORDS);
+    const text = hasStopWord ? stripTrailingStopWord(raw) : raw;
+
     if (timerRef.current) clearTimeout(timerRef.current);
+
+    if (hasStopWord) {
+      lastSentRef.current = raw;
+      if (text) {
+        process(text).finally(() => end());
+      } else {
+        end();
+      }
+      return;
+    }
+
     timerRef.current = setTimeout(() => {
-      lastSentRef.current = text;
+      lastSentRef.current = raw;
       process(text);
     }, SILENCE_MS);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [transcript, interimTranscript, open, active, process]);
+  }, [transcript, interimTranscript, open, active, process, end]);
+
+  // Wake word: while idle, say "Alice" to start talking without touching a button
+  useEffect(() => {
+    if (!open || active || !waking) return;
+    const heard = `${transcript || ""} ${interimTranscript || ""}`;
+    if (!heard.trim()) return;
+    if (containsAny(heard, WAKE_WORDS)) {
+      reset();
+      setWaking(false);
+      setActive(true);
+    }
+  }, [transcript, interimTranscript, open, active, waking, reset]);
 
   // Resume listening once the reply finished speaking
   useEffect(() => {
-    if (!open || !active) return;
+    if (!open || (!active && !waking)) return;
     if (thinking || tts.isSpeaking || isListening) return;
     const id = setTimeout(() => start(), 400);
     return () => clearTimeout(id);
-  }, [open, active, thinking, tts.isSpeaking, isListening, start]);
+  }, [open, active, waking, thinking, tts.isSpeaking, isListening, start]);
 
-  const begin = () => {
+  const requestMic = useCallback(async () => {
     if (!isSupported) {
       toast({
         title: t("offload.voiceUnsupported", {
@@ -98,33 +155,60 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
         }),
         variant: "destructive",
       });
-      return;
+      return false;
     }
+    const state = await ensureMicrophone();
+    if (state === "ok") return true;
+    toast({
+      title:
+        state === "notfound"
+          ? t("offload.micNotFound", { defaultValue: "Nenhum microfone encontrado no dispositivo" })
+          : state === "unsupported"
+          ? t("offload.micUnsupported", { defaultValue: "Este navegador não permite usar o microfone" })
+          : t("offload.micDenied", {
+              defaultValue: "Permissão do microfone negada. Autorize nas definições do navegador.",
+            }),
+      variant: "destructive",
+    });
+    return false;
+  }, [isSupported, t, toast]);
+
+  const begin = useCallback(async () => {
+    if (!(await requestMic())) return;
+    setWaking(false);
     setActive(true);
     start();
-  };
+  }, [requestMic, start]);
 
-  const end = useCallback(() => {
-    setActive(false);
-    stop();
-    reset();
-    tts.stop();
-  }, [reset, stop, tts]);
-
+  // On open: request the real mic and stay in wake-word mode
   useEffect(() => {
     if (!open) {
       end();
       setLines([]);
+      return;
     }
+    let cancelled = false;
+    (async () => {
+      const ok = await requestMic();
+      if (!cancelled && ok) setWaking(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Release mic and speech when the component unmounts
+  useEffect(() => () => end(), [end]);
 
   const statusText = thinking
     ? t("offload.thinking")
     : tts.isSpeaking
     ? t("offload.assistantSpeaking", { defaultValue: "A responder..." })
-    : isListening
+    : active && isListening
     ? t("offload.assistantListening", { defaultValue: "A ouvir..." })
+    : waking
+    ? t("offload.assistantWake", { defaultValue: 'Diga "Alice" para começar' })
     : t("offload.assistantIdle", { defaultValue: "Toque para falar" });
 
   return (
@@ -133,7 +217,7 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            {t("offload.assistantTitle", { defaultValue: "Nina — Assistente inteligente" })}
+            {t("offload.assistantTitle", { defaultValue: "Alice — Assistente inteligente" })}
           </SheetTitle>
         </SheetHeader>
 
@@ -142,7 +226,7 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
             className={cn(
               "w-28 h-28 rounded-full flex items-center justify-center transition-all",
               active ? "gradient-calm shadow-lg" : "bg-muted",
-              (tts.isSpeaking || isListening) && "animate-pulse scale-105"
+              (tts.isSpeaking || (active && isListening)) && "animate-pulse scale-105"
             )}
           >
             {thinking ? (
@@ -154,7 +238,7 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
             )}
           </div>
           <p className="mt-3 text-sm text-muted-foreground">{statusText}</p>
-          {interimTranscript && (
+          {active && interimTranscript && (
             <p className="mt-1 text-xs text-muted-foreground italic px-6 text-center">{interimTranscript}</p>
           )}
         </div>
@@ -185,12 +269,13 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
           ) : (
             <Button className="w-full rounded-full gradient-calm text-white border-0" onClick={begin}>
               <Mic className="w-4 h-4 mr-2" />
-              {t("offload.assistantStart", { defaultValue: "Falar com a Nina" })}
+              {t("offload.assistantStart", { defaultValue: "Falar com a Alice" })}
             </Button>
           )}
           <p className="text-[11px] text-center text-muted-foreground mt-2">
             {t("offload.assistantHint", {
-              defaultValue: "Gratuita: voz do dispositivo + IA do MindFlow. Diga \"pode criar...\" para criar itens.",
+              defaultValue:
+                'Diga "Alice" para começar, "pode criar..." para criar itens e "terminado" para encerrar.',
             })}
           </p>
         </div>
