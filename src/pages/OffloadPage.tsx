@@ -388,10 +388,9 @@ const OffloadPage = () => {
         </Card>
       </div>
 
-      <AliceAgentSheet open={agentOpen} onOpenChange={setAgentOpen} />
       <VoiceAssistantSheet
-        open={ninaOpen}
-        onOpenChange={setNinaOpen}
+        open={aliceOpen}
+        onOpenChange={setAliceOpen}
         onSend={(text) => handleSend(text, { silent: true })}
       />
     </div>
