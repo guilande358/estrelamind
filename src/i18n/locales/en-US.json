@@ -114,7 +114,19 @@
     "mute": "Mute voice",
     "unmute": "Unmute voice",
     "readUnread": "Read unread",
-    "noUnread": "No new messages"
+    "noUnread": "No new messages",
+    "assistantTitle": "Alice — Smart assistant",
+    "assistantStart": "Talk to Alice",
+    "assistantStop": "Stop",
+    "assistantListening": "Listening...",
+    "assistantSpeaking": "Replying...",
+    "assistantIdle": "Tap to speak",
+    "assistantWake": "Say \"Alice\" to start",
+    "assistantHint": "Say \"Alice\" to start, \"please create...\" to add items and \"done\" to finish.",
+    "voiceUnsupported": "Your browser does not support speech recognition",
+    "micNotFound": "No microphone found on this device",
+    "micUnsupported": "This browser cannot access the microphone",
+    "micDenied": "Microphone permission denied. Allow it in your browser settings."
   },
   "profile": {
     "title": "Profile",

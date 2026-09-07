@@ -114,7 +114,19 @@
     "mute": "Couper la voix",
     "unmute": "Activer la voix",
     "readUnread": "Lire les non lus",
-    "noUnread": "Aucun nouveau message"
+    "noUnread": "Aucun nouveau message",
+    "assistantTitle": "Alice — Assistante intelligente",
+    "assistantStart": "Parler à Alice",
+    "assistantStop": "Arrêter",
+    "assistantListening": "À l'écoute...",
+    "assistantSpeaking": "Réponse en cours...",
+    "assistantIdle": "Touchez pour parler",
+    "assistantWake": "Dites « Alice » pour commencer",
+    "assistantHint": "Dites « Alice » pour commencer, « crée... » pour ajouter des éléments et « fini » pour terminer.",
+    "voiceUnsupported": "Votre navigateur ne prend pas en charge la reconnaissance vocale",
+    "micNotFound": "Aucun microphone détecté sur cet appareil",
+    "micUnsupported": "Ce navigateur ne peut pas accéder au microphone",
+    "micDenied": "Accès au microphone refusé. Autorisez-le dans les réglages du navigateur."
   },
   "profile": {
     "title": "Profil",
