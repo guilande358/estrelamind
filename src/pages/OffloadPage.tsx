@@ -271,11 +271,8 @@ const OffloadPage = () => {
           <p className="text-xs text-muted-foreground">{t("offload.chatSubtitle")}</p>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setNinaOpen(true)} title={t("offload.assistantStart", { defaultValue: "Falar com a Nina" })}>
+          <Button variant="ghost" size="icon" onClick={() => setAliceOpen(true)} title={t("offload.assistantStart", { defaultValue: "Falar com a Alice" })}>
             <Sparkles className="w-5 h-5 text-primary" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => setAgentOpen(true)} title={t("offload.agentStart", { defaultValue: "Falar com a Alice" })}>
-            <PhoneCall className="w-5 h-5 text-primary" />
           </Button>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" onClick={readUnread} title={t("offload.readUnread")}>
