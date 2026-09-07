@@ -56,8 +56,7 @@ const OffloadPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [savingMsgId, setSavingMsgId] = useState<string | null>(null);
   const [resolvedMsgIds, setResolvedMsgIds] = useState<Set<string>>(new Set());
-  const [agentOpen, setAgentOpen] = useState(false);
-  const [ninaOpen, setNinaOpen] = useState(false);
+  const [aliceOpen, setAliceOpen] = useState(false);
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
   const scrollRef = useRef<HTMLDivElement>(null);
 
