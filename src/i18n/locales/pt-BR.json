@@ -114,7 +114,19 @@
     "mute": "Silenciar voz",
     "unmute": "Ativar voz",
     "readUnread": "Ler não lidas",
-    "noUnread": "Nenhuma mensagem nova"
+    "noUnread": "Nenhuma mensagem nova",
+    "assistantTitle": "Alice — Assistente inteligente",
+    "assistantStart": "Falar com a Alice",
+    "assistantStop": "Parar",
+    "assistantListening": "A ouvir...",
+    "assistantSpeaking": "A responder...",
+    "assistantIdle": "Toque para falar",
+    "assistantWake": "Diga \"Alice\" para começar",
+    "assistantHint": "Diga \"Alice\" para começar, \"pode criar...\" para criar itens e \"terminado\" para encerrar.",
+    "voiceUnsupported": "O seu navegador não suporta reconhecimento de voz",
+    "micNotFound": "Nenhum microfone encontrado no dispositivo",
+    "micUnsupported": "Este navegador não permite usar o microfone",
+    "micDenied": "Permissão do microfone negada. Autorize nas definições do navegador."
   },
   "profile": {
     "title": "Perfil",
