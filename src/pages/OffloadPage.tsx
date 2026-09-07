@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell, PhoneCall } from "lucide-react";
+import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { useVoiceCapture, AUTO_CREATE_WORDS, containsAny } from "@/contexts/Voic
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ConfirmationCard, { type AIItem } from "@/components/offload/ConfirmationCard";
-import AliceAgentSheet from "@/components/offload/AliceAgentSheet";
+
 import VoiceAssistantSheet from "@/components/offload/VoiceAssistantSheet";
 import { cn } from "@/lib/utils";
 
