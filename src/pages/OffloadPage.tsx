@@ -113,6 +113,12 @@ const OffloadPage = () => {
     return data as unknown as DbMessage;
   };
 
+const EXPENSE_CATEGORIES = ["casa", "filhos", "transporte", "estudos", "lazer", "alimentacao", "saude", "outros"];
+const normalizeExpenseCategory = (value?: string | null) => {
+  const raw = (value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return EXPENSE_CATEGORIES.includes(raw) ? raw : "outros";
+};
+
   const persistItems = async (items: AIItem[]) => {
     const results = await Promise.allSettled(
       items.map((item) => {
