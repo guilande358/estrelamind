@@ -113,6 +113,12 @@ const OffloadPage = () => {
     return data as unknown as DbMessage;
   };
 
+const EXPENSE_CATEGORIES = ["casa", "filhos", "transporte", "estudos", "lazer", "alimentacao", "saude", "outros"];
+const normalizeExpenseCategory = (value?: string | null) => {
+  const raw = (value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return EXPENSE_CATEGORIES.includes(raw) ? raw : "outros";
+};
+
   const persistItems = async (items: AIItem[]) => {
     const results = await Promise.allSettled(
       items.map((item) => {
@@ -134,7 +140,7 @@ const OffloadPage = () => {
             title: item.title,
             amount: item.amount || 0,
             expense_date: item.date || new Date().toISOString().split("T")[0],
-            category: item.category || "outros",
+            category: normalizeExpenseCategory(item.category),
           });
         }
         return Promise.reject(new Error("unknown item type"));
