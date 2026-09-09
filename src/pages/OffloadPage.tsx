@@ -134,7 +134,7 @@ const OffloadPage = () => {
             title: item.title,
             amount: item.amount || 0,
             expense_date: item.date || new Date().toISOString().split("T")[0],
-            category: item.category || "outros",
+            category: normalizeExpenseCategory(item.category),
           });
         }
         return Promise.reject(new Error("unknown item type"));
