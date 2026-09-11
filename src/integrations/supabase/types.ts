@@ -159,7 +159,7 @@ export type Database = {
           payer_phone: string
           plan: string
           proof_url?: string | null
-          reference: string
+          reference?: string
           reject_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -199,6 +199,7 @@ export type Database = {
           login_count: number
           mode: string | null
           offload_count: number
+          offload_used_total: number
           preferred_currency: string
           premium_until: string | null
           updated_at: string
@@ -214,6 +215,7 @@ export type Database = {
           login_count?: number
           mode?: string | null
           offload_count?: number
+          offload_used_total?: number
           preferred_currency?: string
           premium_until?: string | null
           updated_at?: string
@@ -229,6 +231,7 @@ export type Database = {
           login_count?: number
           mode?: string | null
           offload_count?: number
+          offload_used_total?: number
           preferred_currency?: string
           premium_until?: string | null
           updated_at?: string
@@ -305,6 +308,7 @@ export type Database = {
     }
     Functions: {
       consume_offload_quota: { Args: never; Returns: Json }
+      gen_payment_reference: { Args: never; Returns: string }
       tick_login: { Args: never; Returns: Json }
     }
     Enums: {
