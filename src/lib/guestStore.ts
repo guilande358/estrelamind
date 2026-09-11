@@ -43,7 +43,7 @@ export const guestInsert = <T extends Record<string, any>>(
     created_at: now,
     updated_at: now,
     ...values,
-  } as T;
+  } as unknown as T;
   store[collection] = [...store[collection], row];
   write(store);
   return row;
