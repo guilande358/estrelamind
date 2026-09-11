@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.force_payment_reference() FROM PUBLIC, anon, authenticated;
