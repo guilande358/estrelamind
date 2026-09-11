@@ -1,8 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGuest } from "@/contexts/GuestContext";
 
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
+  const { isGuest } = useGuest();
 
   if (loading) {
     return (
@@ -12,7 +14,7 @@ const ProtectedRoute = () => {
     );
   }
 
-  if (!user) {
+  if (!user && !isGuest) {
     return <Navigate to="/login" replace />;
   }
 
