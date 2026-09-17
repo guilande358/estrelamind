@@ -163,7 +163,7 @@ const PerfilPage = () => {
       )}
 
       {/* Mode Selection */}
-      <section className="px-5 py-4">
+      <section className={`px-5 py-4 ${isGuest ? "hidden" : ""}`}>
         <h2 className="text-lg font-semibold text-foreground mb-3">{t("profile.mode")}</h2>
         <div className="flex gap-3">
           {modes.map((mode) => {
