@@ -25,6 +25,7 @@ const PerfilPage = () => {
   const { user, signOut } = useAuth();
   const { data: profile, updateProfile } = useProfile();
   const { isAdmin } = useUserRole();
+  const { isGuest, endGuest } = useGuest();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
