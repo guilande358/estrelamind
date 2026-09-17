@@ -14,6 +14,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
+import { useGuest } from "@/contexts/GuestContext";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 const PerfilPage = () => {
   const { t } = useTranslation();
