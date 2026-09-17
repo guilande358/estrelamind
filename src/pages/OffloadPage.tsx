@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell, Lock, Crown, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ConfirmationCard, { type AIItem } from "@/components/offload/ConfirmationCard";
 
 import VoiceAssistantSheet from "@/components/offload/VoiceAssistantSheet";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import { useGuest } from "@/contexts/GuestContext";
 import { cn } from "@/lib/utils";
+
+const FREE_LIMIT = 5;
 
 type Role = "user" | "assistant";
 interface DbMessage {
@@ -50,6 +55,8 @@ const OffloadPage = () => {
   const { createEvent } = useEvents();
   const { createExpense } = useExpenses();
   const { consumePendingText, pendingText, open: openVoice } = useVoiceCapture();
+  const { isGuest } = useGuest();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const [input, setInput] = useState("");

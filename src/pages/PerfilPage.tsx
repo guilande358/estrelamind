@@ -14,6 +14,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
+import { useGuest } from "@/contexts/GuestContext";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 const PerfilPage = () => {
   const { t } = useTranslation();
@@ -23,6 +25,7 @@ const PerfilPage = () => {
   const { user, signOut } = useAuth();
   const { data: profile, updateProfile } = useProfile();
   const { isAdmin } = useUserRole();
+  const { isGuest, endGuest } = useGuest();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -51,12 +54,19 @@ const PerfilPage = () => {
     localStorage.setItem("mf_notifications", checked ? "1" : "0");
   };
 
-  const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
-  const email = user?.email || "";
-  const isPremium = profile?.is_premium;
+  const displayName = isGuest
+    ? t("guest.name", { defaultValue: "Visitante" })
+    : profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
+  const email = isGuest ? t("guest.noAccount", { defaultValue: "Sem conta" }) : user?.email || "";
+  const isPremium = !isGuest && profile?.is_premium;
   const currentMode = profile?.mode || "profissional";
 
   const handleLogout = async () => {
+    if (isGuest) {
+      endGuest();
+      navigate("/login", { replace: true });
+      return;
+    }
     await signOut();
     navigate("/login");
   };
@@ -105,8 +115,30 @@ const PerfilPage = () => {
         </Card>
       </div>
 
+      {/* Guest: create an account */}
+      {isGuest && (
+        <div className="px-5 py-2">
+          <Card className="shadow-card border-0">
+            <CardContent className="p-5 space-y-3">
+              <div>
+                <p className="font-semibold text-foreground">
+                  {t("guest.createAccountTitle", { defaultValue: "Criar conta para guardar os seus dados" })}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t("guest.createAccountSub", {
+                    defaultValue:
+                      "Em modo visitante nada fica guardado depois desta sessão e o Offload está bloqueado.",
+                  })}
+                </p>
+              </div>
+              <GoogleSignInButton redirectTo="/perfil" />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Premium Banner */}
-      {!isPremium && (
+      {!isPremium && !isGuest && (
         <div className="px-5 py-2">
           <Card
             className="shadow-soft border-0 gradient-calm overflow-hidden cursor-pointer"
@@ -131,7 +163,7 @@ const PerfilPage = () => {
       )}
 
       {/* Mode Selection */}
-      <section className="px-5 py-4">
+      <section className={`px-5 py-4 ${isGuest ? "hidden" : ""}`}>
         <h2 className="text-lg font-semibold text-foreground mb-3">{t("profile.mode")}</h2>
         <div className="flex gap-3">
           {modes.map((mode) => {

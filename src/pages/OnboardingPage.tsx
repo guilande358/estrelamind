@@ -3,6 +3,8 @@ import { ChevronRight, Brain, Calendar, Wallet, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import { useGuest } from "@/contexts/GuestContext";
 
 const slideKeys = ["mind", "agenda", "expenses", "ai"] as const;
 const slideIcons = [
@@ -16,6 +18,7 @@ const OnboardingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { startGuest } = useGuest();
 
   const handleNext = () => {
     if (currentSlide < slideKeys.length - 1) {
@@ -65,6 +68,20 @@ const OnboardingPage = () => {
           {currentSlide === slideKeys.length - 1 ? t("onboarding.start") : t("onboarding.next")}
           <ChevronRight className="w-5 h-5 ml-2" />
         </Button>
+
+        <div className="mt-3 space-y-2">
+          <GoogleSignInButton />
+          <Button
+            variant="ghost"
+            className="w-full h-12 text-muted-foreground"
+            onClick={() => {
+              startGuest();
+              navigate("/home", { replace: true });
+            }}
+          >
+            {t("guest.enter", { defaultValue: "Entrar como visitante" })}
+          </Button>
+        </div>
       </div>
     </div>
   );

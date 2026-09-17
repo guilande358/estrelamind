@@ -12,6 +12,7 @@ export interface Profile {
   is_premium: boolean | null;
   premium_until: string | null;
   offload_count: number | null;
+  offload_used_total: number | null;
   login_count: number | null;
   preferred_currency: string | null;
   created_at: string;
