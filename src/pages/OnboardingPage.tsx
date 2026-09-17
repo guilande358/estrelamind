@@ -3,6 +3,8 @@ import { ChevronRight, Brain, Calendar, Wallet, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import { useGuest } from "@/contexts/GuestContext";
 
 const slideKeys = ["mind", "agenda", "expenses", "ai"] as const;
 const slideIcons = [
