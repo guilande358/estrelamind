@@ -115,8 +115,30 @@ const PerfilPage = () => {
         </Card>
       </div>
 
+      {/* Guest: create an account */}
+      {isGuest && (
+        <div className="px-5 py-2">
+          <Card className="shadow-card border-0">
+            <CardContent className="p-5 space-y-3">
+              <div>
+                <p className="font-semibold text-foreground">
+                  {t("guest.createAccountTitle", { defaultValue: "Criar conta para guardar os seus dados" })}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t("guest.createAccountSub", {
+                    defaultValue:
+                      "Em modo visitante nada fica guardado depois desta sessão e o Offload está bloqueado.",
+                  })}
+                </p>
+              </div>
+              <GoogleSignInButton redirectTo="/perfil" />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Premium Banner */}
-      {!isPremium && (
+      {!isPremium && !isGuest && (
         <div className="px-5 py-2">
           <Card
             className="shadow-soft border-0 gradient-calm overflow-hidden cursor-pointer"
