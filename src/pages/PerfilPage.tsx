@@ -54,12 +54,19 @@ const PerfilPage = () => {
     localStorage.setItem("mf_notifications", checked ? "1" : "0");
   };
 
-  const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
-  const email = user?.email || "";
-  const isPremium = profile?.is_premium;
+  const displayName = isGuest
+    ? t("guest.name", { defaultValue: "Visitante" })
+    : profile?.display_name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Usuário";
+  const email = isGuest ? t("guest.noAccount", { defaultValue: "Sem conta" }) : user?.email || "";
+  const isPremium = !isGuest && profile?.is_premium;
   const currentMode = profile?.mode || "profissional";
 
   const handleLogout = async () => {
+    if (isGuest) {
+      endGuest();
+      navigate("/login", { replace: true });
+      return;
+    }
     await signOut();
     navigate("/login");
   };
