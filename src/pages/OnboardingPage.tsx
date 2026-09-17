@@ -18,6 +18,7 @@ const OnboardingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { startGuest } = useGuest();
 
   const handleNext = () => {
     if (currentSlide < slideKeys.length - 1) {
