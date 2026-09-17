@@ -65,6 +65,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
           </VoiceCaptureProvider>
+          </GuestProvider>
         </AuthProvider>
       </ThemeProvider>
     </TooltipProvider>
