@@ -55,6 +55,8 @@ const OffloadPage = () => {
   const { createEvent } = useEvents();
   const { createExpense } = useExpenses();
   const { consumePendingText, pendingText, open: openVoice } = useVoiceCapture();
+  const { isGuest } = useGuest();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const [input, setInput] = useState("");
