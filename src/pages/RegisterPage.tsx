@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { lovable } from "@/integrations/lovable/index";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 const RegisterPage = () => {
   const [name, setName] = useState("");
