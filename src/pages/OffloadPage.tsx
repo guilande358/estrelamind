@@ -237,7 +237,7 @@ const normalizeExpenseCategory = (value?: string | null) => {
       };
 
       const { data, error } = await supabase.functions.invoke("offload-process", {
-        body: { text, language: i18n.language, context },
+        body: { text, language: i18n.language, context, localDate: today, localTime, timeZone, weekday },
       });
       if (error) throw error;
 
