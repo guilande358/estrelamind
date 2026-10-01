@@ -65,9 +65,14 @@ const OffloadPage = () => {
   const [resolvedMsgIds, setResolvedMsgIds] = useState<Set<string>>(new Set());
   const [aliceOpen, setAliceOpen] = useState(false);
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
+  const [showPaywall, setShowPaywall] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const isPremium = profile?.is_premium;
+  const isPremium =
+    profile?.is_premium && (!profile?.premium_until || new Date(profile.premium_until) > new Date());
+  const used = profile?.offload_used_total ?? 0;
+  const remaining = isPremium ? -1 : Math.max(0, FREE_LIMIT - used);
+  const outOfQuota = !isPremium && remaining === 0;
 
   const { data: messages = [] } = useQuery({
     queryKey: ["offload_messages", user?.id],
