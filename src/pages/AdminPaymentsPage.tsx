@@ -82,6 +82,8 @@ const StatusList = ({ status }: { status: string }) => {
             </div>
 
             <dl className="text-sm space-y-1">
+              <Field label="Nome" value={(r as any).payer_name || "—"} />
+              <Field label="Email" value={(r as any).payer_email || "—"} />
               <Field label="Referência" value={r.reference} />
               <Field label="Método" value={PAYMENT_ACCOUNTS[r.method as "mpesa" | "emola"]?.label ?? r.method} />
               <Field label="Telefone" value={r.payer_phone} />

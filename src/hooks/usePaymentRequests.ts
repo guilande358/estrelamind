@@ -20,22 +20,11 @@ export interface PaymentRequest {
   created_at: string;
 }
 
-const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-export const generateReference = () => {
-  let out = "";
-  const bytes = new Uint8Array(6);
-  crypto.getRandomValues(bytes);
-  bytes.forEach((b) => (out += REF_ALPHABET[b % REF_ALPHABET.length]));
-  return `MF-${out}`;
-};
-
 export interface SubmitPaymentInput {
   plan: PlanId;
   method: PaymentMethod;
   payerPhone: string;
   transactionId: string;
-  reference: string;
   proofFile?: File | null;
 }
 
@@ -64,7 +53,7 @@ export const usePaymentRequests = () => {
       let proofPath: string | null = null;
       if (input.proofFile) {
         const ext = input.proofFile.name.split(".").pop()?.toLowerCase() || "jpg";
-        proofPath = `${user.id}/${input.reference}-${Date.now()}.${ext}`;
+        proofPath = `${user.id}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("payment-proofs")
           .upload(proofPath, input.proofFile, { upsert: false });
@@ -81,7 +70,8 @@ export const usePaymentRequests = () => {
           method: input.method,
           payer_phone: input.payerPhone.trim(),
           transaction_id: input.transactionId.trim(),
-          reference: input.reference,
+          // reference is generated server-side by a database trigger
+          reference: "",
           proof_url: proofPath,
           status: "pending",
         })

@@ -35,7 +35,7 @@ serve(async (req) => {
       });
     }
 
-    const { text, language, context } = await req.json();
+    const { text, language, context, localDate, localTime, timeZone, weekday } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
     if (!text) {
@@ -45,7 +45,10 @@ serve(async (req) => {
     }
 
     const langName = languageNames[language] || 'Portuguese (Brazil)';
-    const today = new Date().toISOString().split('T')[0];
+    const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+    const isoTime = /^\d{2}:\d{2}$/;
+    const today = isoDate.test(localDate ?? '') ? localDate : new Date().toISOString().split('T')[0];
+    const nowTime = isoTime.test(localTime ?? '') ? localTime : '';
 
     const systemPrompt = `You are MindFlow AI — an autonomous, friendly personal assistant inside a mobile productivity app.
 
@@ -58,7 +61,7 @@ YOU HAVE TWO TOOLS — choose the right one:
 
 1) create_items — when the user describes things to remember/do (tasks, events, expenses, reminders).
    - Be aggressive: if it sounds actionable, extract it.
-   - Today is ${today}. Resolve relative dates ("amanhã", "tomorrow", "next Friday", "lunes") to an absolute date.
+   - The user's local date is ${today}${weekday ? ` (${weekday})` : ''}, local time ${nowTime || 'unknown'}${timeZone ? `, timezone ${timeZone}` : ''}. Always resolve relative dates/times ("amanhã", "tomorrow", "next Friday", "daqui a 2 horas") against this local date and time, never against UTC.
    - 'date' MUST be in strict ISO format YYYY-MM-DD (e.g. "2026-06-02"). Never output natural-language dates.
    - 'time' MUST be HH:MM 24h (e.g. "14:30"). Never include AM/PM, seconds or timezone.
    - If a field is ambiguous or not mentioned, OMIT it entirely (do not invent).

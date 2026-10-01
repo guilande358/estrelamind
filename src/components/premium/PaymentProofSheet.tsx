@@ -19,10 +19,9 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plan: PlanId;
-  reference: string;
 }
 
-const PaymentProofSheet = ({ open, onOpenChange, plan, reference }: Props) => {
+const PaymentProofSheet = ({ open, onOpenChange, plan }: Props) => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { submit } = usePaymentRequests();
@@ -52,7 +51,6 @@ const PaymentProofSheet = ({ open, onOpenChange, plan, reference }: Props) => {
         method,
         payerPhone: phone,
         transactionId,
-        reference,
         proofFile: file,
       });
       toast({ title: t("premium.submitted"), description: t("premium.submittedSub") });
@@ -103,8 +101,12 @@ const PaymentProofSheet = ({ open, onOpenChange, plan, reference }: Props) => {
               onCopy={() => copy(account.number)}
             />
             <Row label={t("premium.amount")} value={formatMzn(amount)} onCopy={() => copy(String(amount))} />
-            <Row label={t("premium.reference")} value={reference} onCopy={() => copy(reference)} />
-            <p className="text-xs text-muted-foreground pt-1">{t("premium.referenceHint")}</p>
+            <p className="text-xs text-muted-foreground pt-1">
+              {t("premium.referenceAuto", {
+                defaultValue:
+                  "A referência é gerada automaticamente ao submeter e fica visível nesta página.",
+              })}
+            </p>
           </div>
 
           {/* Form */}

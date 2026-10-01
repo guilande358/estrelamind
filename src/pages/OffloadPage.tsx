@@ -65,9 +65,14 @@ const OffloadPage = () => {
   const [resolvedMsgIds, setResolvedMsgIds] = useState<Set<string>>(new Set());
   const [aliceOpen, setAliceOpen] = useState(false);
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
+  const [showPaywall, setShowPaywall] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const isPremium = profile?.is_premium;
+  const isPremium =
+    profile?.is_premium && (!profile?.premium_until || new Date(profile.premium_until) > new Date());
+  const used = profile?.offload_used_total ?? 0;
+  const remaining = isPremium ? -1 : Math.max(0, FREE_LIMIT - used);
+  const outOfQuota = !isPremium && remaining === 0;
 
   const { data: messages = [] } = useQuery({
     queryKey: ["offload_messages", user?.id],
@@ -126,6 +131,18 @@ const normalizeExpenseCategory = (value?: string | null) => {
   return EXPENSE_CATEGORIES.includes(raw) ? raw : "outros";
 };
 
+// Local (device) date, so items never land on the wrong day because of UTC.
+const localToday = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const localNowTime = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
   const persistItems = async (items: AIItem[]) => {
     const results = await Promise.allSettled(
       items.map((item) => {
@@ -139,14 +156,14 @@ const normalizeExpenseCategory = (value?: string | null) => {
           });
         }
         if (item.type === "event") {
-          const startDate = item.date ? `${item.date}T${item.time || "09:00"}:00` : new Date().toISOString();
+          const startDate = `${item.date || localToday()}T${item.time || localNowTime()}:00`;
           return createEvent.mutateAsync({ title: item.title, start_date: startDate, category: item.category || "geral" });
         }
         if (item.type === "expense") {
           return createExpense.mutateAsync({
             title: item.title,
             amount: item.amount || 0,
-            expense_date: item.date || new Date().toISOString().split("T")[0],
+            expense_date: item.date || localToday(),
             category: normalizeExpenseCategory(item.category),
           });
         }
@@ -185,17 +202,32 @@ const normalizeExpenseCategory = (value?: string | null) => {
   const handleSend = async (raw?: string, opts?: { silent?: boolean }) => {
     const text = (raw ?? input).trim();
     if (!text || !user) return;
+
+    // Free plan: 5 messages in total
+    if (!isPremium) {
+      const { data: quota, error: quotaError } = await supabase.rpc("consume_offload_quota");
+      const result = quota as { allowed?: boolean } | null;
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      if (quotaError || !result?.allowed) {
+        setShowPaywall(true);
+        return;
+      }
+    }
+
     setInput("");
     setIsProcessing(true);
 
     await insertMessage({ role: "user", content: text, items: null, read: true });
 
     try {
-      // Build report context (aggregates) for the AI
-      const today = new Date().toISOString().split("T")[0];
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      const monthStartIso = monthStart.toISOString().split("T")[0];
+      // Local (device) date and time so relative dates land on the right day
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const localTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const weekday = now.toLocaleDateString(i18n.language, { weekday: "long" });
+      const monthStartIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
 
       const [pendingTasks, todayEvents, monthExpenses] = await Promise.all([
         supabase.from("tasks").select("id,title,due_date,priority", { count: "exact" }).eq("user_id", user.id).eq("completed", false),
@@ -217,7 +249,7 @@ const normalizeExpenseCategory = (value?: string | null) => {
       };
 
       const { data, error } = await supabase.functions.invoke("offload-process", {
-        body: { text, language: i18n.language, context },
+        body: { text, language: i18n.language, context, localDate: today, localTime, timeZone, weekday },
       });
       if (error) throw error;
 
@@ -272,6 +304,31 @@ const normalizeExpenseCategory = (value?: string | null) => {
     });
   };
 
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background px-8 text-center safe-top">
+        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+          <Lock className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h1 className="text-xl font-semibold text-foreground">
+          {t("guest.offloadLockedTitle", { defaultValue: "Offload disponível só com conta" })}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-2 mb-6">
+          {t("guest.offloadLockedSub", {
+            defaultValue:
+              "Em modo visitante os dados não são guardados depois desta sessão. Crie conta para usar o Offload.",
+          })}
+        </p>
+        <div className="w-full max-w-xs space-y-2">
+          <GoogleSignInButton redirectTo="/offload" />
+          <Button variant="ghost" className="w-full" onClick={() => navigate("/register")}>
+            {t("login.createAccount", { defaultValue: "Criar conta" })}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background safe-top">
       {/* Header */}
@@ -297,6 +354,52 @@ const normalizeExpenseCategory = (value?: string | null) => {
           </Button>
         </div>
       </header>
+
+      {/* Free quota counter */}
+      {!isPremium && (
+        <div className="px-5 py-2 text-xs text-muted-foreground border-b border-border">
+          {outOfQuota
+            ? t("offload.quotaOver", { defaultValue: "Limite gratuito atingido. Passe a Premium para continuar." })
+            : t("offload.quotaLeft", {
+                count: remaining,
+                defaultValue: `Restam ${remaining} de ${FREE_LIMIT} mensagens gratuitas`,
+              })}
+        </div>
+      )}
+
+      {/* Floating Premium banner */}
+      {showPaywall && !isPremium && (
+        <div className="fixed left-4 right-4 bottom-28 z-50">
+          <div className="rounded-2xl gradient-calm shadow-lg p-4 flex items-start gap-3">
+            <Crown className="w-6 h-6 text-white shrink-0" />
+            <div className="flex-1">
+              <p className="font-semibold text-white">
+                {t("offload.paywallTitle", { defaultValue: "Limite gratuito atingido" })}
+              </p>
+              <p className="text-sm text-white/80">
+                {t("offload.paywallSub", {
+                  defaultValue: "Use as 5 mensagens gratuitas. Passe a Premium para uso ilimitado.",
+                })}
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-2 bg-white/20 text-white hover:bg-white/30 border-0"
+                onClick={() => navigate("/premium")}
+              >
+                {t("profile.viewPlans", { defaultValue: "Ver planos" })}
+              </Button>
+            </div>
+            <button
+              aria-label={t("common.close", { defaultValue: "Fechar" })}
+              onClick={() => setShowPaywall(false)}
+              className="text-white/80"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">

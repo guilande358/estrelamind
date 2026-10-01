@@ -2,19 +2,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { PaymentRequest } from "@/hooks/usePaymentRequests";
 
+export interface AdminPaymentRequest extends PaymentRequest {
+  payer_name: string | null;
+  payer_email: string | null;
+}
+
 export const useAdminPayments = (status: string) => {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["admin-payments", status],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("payment_requests")
-        .select("*")
-        .eq("status", status)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.functions.invoke("admin-list-payments", {
+        body: { status },
+      });
       if (error) throw error;
-      return (data ?? []) as PaymentRequest[];
+      const result = data as { ok: boolean; items?: AdminPaymentRequest[]; error?: string };
+      if (!result?.ok) throw new Error(result?.error || "Falha ao carregar");
+      return result.items ?? [];
     },
   });
 
