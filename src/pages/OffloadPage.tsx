@@ -355,6 +355,52 @@ const localNowTime = () => {
         </div>
       </header>
 
+      {/* Free quota counter */}
+      {!isPremium && (
+        <div className="px-5 py-2 text-xs text-muted-foreground border-b border-border">
+          {outOfQuota
+            ? t("offload.quotaOver", { defaultValue: "Limite gratuito atingido. Passe a Premium para continuar." })
+            : t("offload.quotaLeft", {
+                count: remaining,
+                defaultValue: `Restam ${remaining} de ${FREE_LIMIT} mensagens gratuitas`,
+              })}
+        </div>
+      )}
+
+      {/* Floating Premium banner */}
+      {showPaywall && !isPremium && (
+        <div className="fixed left-4 right-4 bottom-28 z-50">
+          <div className="rounded-2xl gradient-calm shadow-lg p-4 flex items-start gap-3">
+            <Crown className="w-6 h-6 text-white shrink-0" />
+            <div className="flex-1">
+              <p className="font-semibold text-white">
+                {t("offload.paywallTitle", { defaultValue: "Limite gratuito atingido" })}
+              </p>
+              <p className="text-sm text-white/80">
+                {t("offload.paywallSub", {
+                  defaultValue: "Use as 5 mensagens gratuitas. Passe a Premium para uso ilimitado.",
+                })}
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-2 bg-white/20 text-white hover:bg-white/30 border-0"
+                onClick={() => navigate("/premium")}
+              >
+                {t("profile.viewPlans", { defaultValue: "Ver planos" })}
+              </Button>
+            </div>
+            <button
+              aria-label={t("common.close", { defaultValue: "Fechar" })}
+              onClick={() => setShowPaywall(false)}
+              className="text-white/80"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {messages.length === 0 && !isProcessing && (
