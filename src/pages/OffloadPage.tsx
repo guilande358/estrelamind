@@ -131,6 +131,18 @@ const normalizeExpenseCategory = (value?: string | null) => {
   return EXPENSE_CATEGORIES.includes(raw) ? raw : "outros";
 };
 
+// Local (device) date, so items never land on the wrong day because of UTC.
+const localToday = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const localNowTime = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
   const persistItems = async (items: AIItem[]) => {
     const results = await Promise.allSettled(
       items.map((item) => {
