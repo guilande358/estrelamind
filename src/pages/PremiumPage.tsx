@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import PaymentProofSheet from "@/components/premium/PaymentProofSheet";
-import { usePaymentRequests, generateReference } from "@/hooks/usePaymentRequests";
+import { usePaymentRequests } from "@/hooks/usePaymentRequests";
 import { PAYMENT_ACCOUNTS, type PlanId } from "@/config/payments";
 
 const PremiumPage = () => {
@@ -18,7 +18,6 @@ const PremiumPage = () => {
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [plan, setPlan] = useState<PlanId>("yearly");
-  const reference = useMemo(() => generateReference(), [sheetOpen ? plan : plan]);
 
   const isPremium =
     profile?.is_premium && (!profile?.premium_until || new Date(profile.premium_until) > new Date());

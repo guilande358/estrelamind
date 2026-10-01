@@ -51,7 +51,6 @@ const PaymentProofSheet = ({ open, onOpenChange, plan }: Props) => {
         method,
         payerPhone: phone,
         transactionId,
-        reference,
         proofFile: file,
       });
       toast({ title: t("premium.submitted"), description: t("premium.submittedSub") });
