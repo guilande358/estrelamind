@@ -61,7 +61,7 @@ YOU HAVE TWO TOOLS — choose the right one:
 
 1) create_items — when the user describes things to remember/do (tasks, events, expenses, reminders).
    - Be aggressive: if it sounds actionable, extract it.
-   - Today is ${today}. Resolve relative dates ("amanhã", "tomorrow", "next Friday", "lunes") to an absolute date.
+   - The user's local date is ${today}${weekday ? ` (${weekday})` : ''}, local time ${nowTime || 'unknown'}${timeZone ? `, timezone ${timeZone}` : ''}. Always resolve relative dates/times ("amanhã", "tomorrow", "next Friday", "daqui a 2 horas") against this local date and time, never against UTC.
    - 'date' MUST be in strict ISO format YYYY-MM-DD (e.g. "2026-06-02"). Never output natural-language dates.
    - 'time' MUST be HH:MM 24h (e.g. "14:30"). Never include AM/PM, seconds or timezone.
    - If a field is ambiguous or not mentioned, OMIT it entirely (do not invent).
