@@ -163,7 +163,7 @@ const localNowTime = () => {
           return createExpense.mutateAsync({
             title: item.title,
             amount: item.amount || 0,
-            expense_date: item.date || new Date().toISOString().split("T")[0],
+            expense_date: item.date || localToday(),
             category: normalizeExpenseCategory(item.category),
           });
         }
