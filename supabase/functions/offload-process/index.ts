@@ -35,7 +35,7 @@ serve(async (req) => {
       });
     }
 
-    const { text, language, context } = await req.json();
+    const { text, language, context, localDate, localTime, timeZone, weekday } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
     if (!text) {
@@ -45,7 +45,10 @@ serve(async (req) => {
     }
 
     const langName = languageNames[language] || 'Portuguese (Brazil)';
-    const today = new Date().toISOString().split('T')[0];
+    const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+    const isoTime = /^\d{2}:\d{2}$/;
+    const today = isoDate.test(localDate ?? '') ? localDate : new Date().toISOString().split('T')[0];
+    const nowTime = isoTime.test(localTime ?? '') ? localTime : '';
 
     const systemPrompt = `You are MindFlow AI — an autonomous, friendly personal assistant inside a mobile productivity app.
 
