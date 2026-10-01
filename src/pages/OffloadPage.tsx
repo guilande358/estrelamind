@@ -156,7 +156,7 @@ const localNowTime = () => {
           });
         }
         if (item.type === "event") {
-          const startDate = item.date ? `${item.date}T${item.time || "09:00"}:00` : new Date().toISOString();
+          const startDate = `${item.date || localToday()}T${item.time || localNowTime()}:00`;
           return createEvent.mutateAsync({ title: item.title, start_date: startDate, category: item.category || "geral" });
         }
         if (item.type === "expense") {
