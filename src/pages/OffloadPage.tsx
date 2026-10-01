@@ -304,6 +304,31 @@ const localNowTime = () => {
     });
   };
 
+  if (isGuest) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background px-8 text-center safe-top">
+        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+          <Lock className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h1 className="text-xl font-semibold text-foreground">
+          {t("guest.offloadLockedTitle", { defaultValue: "Offload disponível só com conta" })}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-2 mb-6">
+          {t("guest.offloadLockedSub", {
+            defaultValue:
+              "Em modo visitante os dados não são guardados depois desta sessão. Crie conta para usar o Offload.",
+          })}
+        </p>
+        <div className="w-full max-w-xs space-y-2">
+          <GoogleSignInButton redirectTo="/offload" />
+          <Button variant="ghost" className="w-full" onClick={() => navigate("/register")}>
+            {t("login.createAccount", { defaultValue: "Criar conta" })}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background safe-top">
       {/* Header */}
