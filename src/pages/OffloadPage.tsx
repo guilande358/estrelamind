@@ -190,17 +190,32 @@ const normalizeExpenseCategory = (value?: string | null) => {
   const handleSend = async (raw?: string, opts?: { silent?: boolean }) => {
     const text = (raw ?? input).trim();
     if (!text || !user) return;
+
+    // Free plan: 5 messages in total
+    if (!isPremium) {
+      const { data: quota, error: quotaError } = await supabase.rpc("consume_offload_quota");
+      const result = quota as { allowed?: boolean } | null;
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      if (quotaError || !result?.allowed) {
+        setShowPaywall(true);
+        return;
+      }
+    }
+
     setInput("");
     setIsProcessing(true);
 
     await insertMessage({ role: "user", content: text, items: null, read: true });
 
     try {
-      // Build report context (aggregates) for the AI
-      const today = new Date().toISOString().split("T")[0];
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      const monthStartIso = monthStart.toISOString().split("T")[0];
+      // Local (device) date and time so relative dates land on the right day
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const localTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const weekday = now.toLocaleDateString(i18n.language, { weekday: "long" });
+      const monthStartIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
 
       const [pendingTasks, todayEvents, monthExpenses] = await Promise.all([
         supabase.from("tasks").select("id,title,due_date,priority", { count: "exact" }).eq("user_id", user.id).eq("completed", false),
