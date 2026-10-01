@@ -19,10 +19,9 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plan: PlanId;
-  reference: string;
 }
 
-const PaymentProofSheet = ({ open, onOpenChange, plan, reference }: Props) => {
+const PaymentProofSheet = ({ open, onOpenChange, plan }: Props) => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { submit } = usePaymentRequests();
