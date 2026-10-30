@@ -1,5 +1,6 @@
-import { Home, Calendar, Wallet, Mic, User } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Home, Calendar, Wallet, Mic, User, MessageSquare } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useVoiceCapture } from "@/contexts/VoiceCaptureContext";
