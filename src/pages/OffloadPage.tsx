@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell, Lock, Crown, X } from "lucide-react";
+import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, CheckCircle2, Calendar, CreditCard, Bell, Lock, Crown, X, MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,7 @@ const OffloadPage = () => {
   const [muted, setMuted] = useState(() => localStorage.getItem("offload_muted") === "1");
   const [showPaywall, setShowPaywall] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const isPremium =
     profile?.is_premium && (!profile?.premium_until || new Date(profile.premium_until) > new Date());
@@ -341,7 +342,7 @@ const localNowTime = () => {
           <p className="text-xs text-muted-foreground">{t("offload.chatSubtitle")}</p>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setAliceOpen(true)} title={t("offload.assistantStart", { defaultValue: "Falar com a Alice" })}>
+          <Button variant="ghost" size="icon" onClick={() => { if (outOfQuota) { setShowPaywall(true); return; } if (!messages.some((m) => m.role === "user")) { composerRef.current?.focus(); toast({ title: t("offload.textFirst", { defaultValue: "Escreva primeiro uma mensagem à Alice no chat." }) }); return; } setAliceOpen(true); }} title={t("offload.assistantStart", { defaultValue: "Falar com a Alice" })}>
             <Sparkles className="w-5 h-5 text-primary" />
           </Button>
           {unreadCount > 0 && (
@@ -477,10 +478,26 @@ const localNowTime = () => {
       <div className="px-4 pb-4 pt-2 border-t border-border bg-card/50">
         <Card className="shadow-soft border-0">
           <CardContent className="p-2 flex items-end gap-2">
-            <Button variant="ghost" size="icon" className="rounded-full shrink-0" onClick={openVoice} title={t("offload.fabLabel")}>
-              <Mic className="w-5 h-5 text-primary" />
-            </Button>
+            {outOfQuota || !messages.some((m) => m.role === "user") ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full shrink-0"
+                onClick={() => {
+                  if (outOfQuota) setShowPaywall(true);
+                  composerRef.current?.focus();
+                }}
+                title={t("offload.chatTitle")}
+              >
+                <MessageSquare className="w-5 h-5 text-primary" />
+              </Button>
+            ) : (
+              <Button variant="ghost" size="icon" className="rounded-full shrink-0" onClick={openVoice} title={t("offload.fabLabel")}>
+                <Mic className="w-5 h-5 text-primary" />
+              </Button>
+            )}
             <Textarea
+              ref={composerRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
