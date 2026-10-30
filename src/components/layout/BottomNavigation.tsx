@@ -26,8 +26,26 @@ const NavItem = ({ to, icon, label, isActive }: NavItemProps) => (
 
 const BottomNavigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { open, isOpen } = useVoiceCapture();
+  const { data: profile } = useProfile();
+
+  const isPremium =
+    !!profile?.is_premium && (!profile?.premium_until || new Date(profile.premium_until) > new Date());
+  const outOfQuota = !!profile && !isPremium && (profile.offload_used_total ?? 0) >= 5;
+  const onOffload = location.pathname === "/offload";
+  // Chat button: free users out of quota always; everyone outside the chat page (text chat comes first).
+  const showChat = outOfQuota || !onOffload;
+
+  const handleFab = () => {
+    if (showChat) {
+      if (!onOffload) navigate("/offload");
+      return;
+    }
+    open();
+  };
+
 
   const left = [
     { to: "/home", icon: <Home size={22} />, label: t("nav.home") },
