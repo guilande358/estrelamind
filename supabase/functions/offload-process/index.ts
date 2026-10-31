@@ -57,26 +57,22 @@ LANGUAGE
 - Reply in that same language. If unclear or mixed, fall back to ${langName} (${language}).
 - Handle Portuguese, English, French, Spanish, and code-switching naturally.
 
-YOU HAVE TWO TOOLS — choose the right one:
+Your name is Alice. Decide the mode:
 
-1) create_items — when the user describes things to remember/do (tasks, events, expenses, reminders).
-   - Be aggressive: if it sounds actionable, extract it.
-   - The user's local date is ${today}${weekday ? ` (${weekday})` : ''}, local time ${nowTime || 'unknown'}${timeZone ? `, timezone ${timeZone}` : ''}. Always resolve relative dates/times ("amanhã", "tomorrow", "next Friday", "daqui a 2 horas") against this local date and time, never against UTC.
-   - 'date' MUST be in strict ISO format YYYY-MM-DD (e.g. "2026-06-02"). Never output natural-language dates.
-   - 'time' MUST be HH:MM 24h (e.g. "14:30"). Never include AM/PM, seconds or timezone.
-   - If a field is ambiguous or not mentioned, OMIT it entirely (do not invent).
-   - Parse currency amounts ("R$ 50", "$20", "50 MZN", "€10") into the numeric 'amount' (positive number, no symbol).
-   - For income mentions ("recebi", "ganhei", "got paid"), still use type='expense' but amount NEGATIVE.
-   - Always include a short, warm confirmation in 'response' (detected language).
+1) "create" — the user describes things to remember/do (tasks, events, expenses, reminders).
+   - The user's local date is ${today}${weekday ? ` (${weekday})` : ''}, local time ${nowTime || 'unknown'}${timeZone ? `, timezone ${timeZone}` : ''}. Resolve relative dates/times against this local date and time, never UTC.
+   - 'date' strictly YYYY-MM-DD. 'time' strictly HH:MM 24h.
+   - If a field is not mentioned, OMIT it.
+   - Parse amounts into a positive number. For income ("recebi", "ganhei"), use type='expense' with NEGATIVE amount.
+   - Expense category one of: alimentacao, transporte, moradia, saude, educacao, lazer, compras, outros.
 
-2) answer_report — when the user is ASKING about their data (counts, totals, pending items, today's schedule, unread messages).
-   - Use the CONTEXT below to answer concretely with real numbers.
-   - Don't create items in this mode.
+2) "report" — the user asks about their data, or just chats. Use CONTEXT for concrete numbers. items = [].
 
-CONTEXT (live data about the user, use it for report answers):
+CONTEXT:
 ${JSON.stringify(context || {}, null, 2)}
 
-Always call exactly ONE tool. Never plain text replies.`;
+Reply ONLY with valid JSON, no markdown:
+{"mode":"create"|"report","response":"short friendly reply in user's language","items":[{"type":"task|event|expense|reminder","title":"...","date":"YYYY-MM-DD","time":"HH:MM","amount":0,"category":"...","priority":"low|medium|high"}]}`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -87,57 +83,7 @@ Always call exactly ONE tool. Never plain text replies.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text },
         ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'create_items',
-              description: 'Extract and create actionable items (tasks, events, expenses, reminders) from the user input.',
-              parameters: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        type: { type: 'string', enum: ['task', 'event', 'expense', 'reminder'] },
-                        title: { type: 'string' },
-                        date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
-                        time: { type: 'string', description: 'HH:MM' },
-                        amount: { type: 'number' },
-                        category: { type: 'string' },
-                        priority: { type: 'string', enum: ['low', 'medium', 'high'] },
-                      },
-                      required: ['type', 'title'],
-                      additionalProperties: false,
-                    },
-                  },
-                  response: { type: 'string', description: 'Friendly confirmation in the user language.' },
-                },
-                required: ['items', 'response'],
-                additionalProperties: false,
-              },
-            },
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'answer_report',
-              description: 'Answer a question about the user data using the CONTEXT (counts, totals, today schedule, unread, etc).',
-              parameters: {
-                type: 'object',
-                properties: {
-                  kind: { type: 'string', enum: ['tasks', 'events', 'expenses', 'notifications', 'mixed'] },
-                  response: { type: 'string', description: 'Natural language answer in user language, using concrete numbers from context.' },
-                },
-                required: ['kind', 'response'],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: 'auto',
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -150,25 +96,21 @@ Always call exactly ONE tool. Never plain text replies.`;
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const content: string = data.choices?.[0]?.message?.content || '';
+    let parsed: any = null;
+    try {
+      const m = content.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(m ? m[0] : content);
+    } catch (_) { parsed = null; }
 
-    if (toolCall?.function?.arguments) {
-      const args = JSON.parse(toolCall.function.arguments);
-      const name = toolCall.function.name;
-      if (name === 'create_items') {
-        return new Response(JSON.stringify({ kind: 'create', items: args.items || [], response: args.response || '' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (name === 'answer_report') {
-        return new Response(JSON.stringify({ kind: args.kind || 'report', items: [], response: args.response || '' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    if (!parsed) {
+      return new Response(JSON.stringify({ kind: 'report', items: [], response: content }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-
-    const content = data.choices?.[0]?.message?.content || '';
-    return new Response(JSON.stringify({ kind: 'report', items: [], response: content }), {
+    const items = Array.isArray(parsed.items) ? parsed.items.filter((i: any) => i && i.title && i.type) : [];
+    const kind = parsed.mode === 'create' && items.length ? 'create' : 'report';
+    return new Response(JSON.stringify({ kind, items: kind === 'create' ? items : [], response: String(parsed.response || '') }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
