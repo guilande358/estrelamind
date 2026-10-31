@@ -69,8 +69,8 @@ const BottomNavigation = () => {
         {/* Central FAB */}
         <div className="relative w-20 flex justify-center">
           <button
-            onClick={open}
-            aria-label={t("offload.fabLabel")}
+            onClick={handleFab}
+            aria-label={showChat ? t("nav.offload", "Chat") : t("offload.fabLabel")}
             className={cn(
               "absolute -top-8 w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl",
               "bg-gradient-to-br from-primary via-mindflow-zen to-primary",
@@ -80,7 +80,11 @@ const BottomNavigation = () => {
             )}
           >
             <span className="relative flex items-center justify-center">
-              <Mic className="w-7 h-7 relative z-10" />
+              {showChat ? (
+                <MessageSquare className="w-7 h-7 relative z-10" />
+              ) : (
+                <Mic className="w-7 h-7 relative z-10" />
+              )}
               {/* Sound wave bars */}
               <span className="absolute inset-0 flex items-center justify-center gap-[2px] opacity-40">
                 <span className="w-[2px] h-2 bg-white rounded animate-pulse" style={{ animationDelay: "0ms" }} />
