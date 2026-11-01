@@ -209,8 +209,18 @@ const localNowTime = () => {
       const { data: quota, error: quotaError } = await supabase.rpc("consume_offload_quota");
       const result = quota as { allowed?: boolean } | null;
       qc.invalidateQueries({ queryKey: ["profile"] });
-      if (quotaError || !result?.allowed) {
+      // Block only when the server explicitly says the free quota is exhausted.
+      if (result?.allowed === false) {
         setShowPaywall(true);
+        return;
+      }
+      if (quotaError) {
+        toast({
+          title: t("offload.quotaCheckFailed", {
+            defaultValue: "Não foi possível verificar o limite — tente novamente.",
+          }),
+          variant: "destructive",
+        });
         return;
       }
     }
