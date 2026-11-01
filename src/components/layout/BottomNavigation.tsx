@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Home, Calendar, Wallet, Mic, User, MessageSquare } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
@@ -36,10 +37,37 @@ const BottomNavigation = () => {
     !!profile?.is_premium && (!profile?.premium_until || new Date(profile.premium_until) > new Date());
   const outOfQuota = !!profile && !isPremium && (profile.offload_used_total ?? 0) >= 5;
   const onOffload = location.pathname === "/offload";
-  // Chat button: free users out of quota always; everyone outside the chat page (text chat comes first).
-  const showChat = outOfQuota || !onOffload;
+
+  // Default: Offload/Mic. Long-press 2.5s toggles to Chat (and back).
+  const [chatMode, setChatMode] = useState<boolean>(() => localStorage.getItem("mf_fab_chat") === "1");
+  const [pressing, setPressing] = useState(false);
+  const timer = useRef<number | null>(null);
+  const longFired = useRef(false);
+  const showChat = outOfQuota || chatMode;
+
+  const startPress = () => {
+    longFired.current = false;
+    setPressing(true);
+    timer.current = window.setTimeout(() => {
+      longFired.current = true;
+      setPressing(false);
+      setChatMode((prev) => {
+        const next = !prev;
+        localStorage.setItem("mf_fab_chat", next ? "1" : "0");
+        return next;
+      });
+      try { navigator.vibrate?.(60); } catch { /* ignore */ }
+    }, 2500);
+  };
+  const cancelPress = () => {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = null;
+    setPressing(false);
+  };
+  useEffect(() => () => cancelPress(), []);
 
   const handleFab = () => {
+    if (longFired.current) { longFired.current = false; return; }
     if (showChat) {
       if (!onOffload) navigate("/offload");
       return;
@@ -70,13 +98,19 @@ const BottomNavigation = () => {
         <div className="relative w-20 flex justify-center">
           <button
             onClick={handleFab}
+            onPointerDown={startPress}
+            onPointerUp={cancelPress}
+            onPointerLeave={cancelPress}
+            onPointerCancel={cancelPress}
+            onContextMenu={(e) => e.preventDefault()}
             aria-label={showChat ? t("nav.offload", "Chat") : t("offload.fabLabel")}
             className={cn(
-              "absolute -top-8 w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl",
+              "absolute -top-8 w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl select-none touch-none",
               "bg-gradient-to-br from-primary via-mindflow-zen to-primary",
               "transition-transform active:scale-95",
               "before:absolute before:inset-0 before:rounded-full before:bg-primary/40 before:animate-ping before:opacity-40",
-              isOpen && "scale-110"
+              isOpen && "scale-110",
+              pressing && "ring-4 ring-primary/60 ring-offset-2 ring-offset-background transition-[box-shadow] duration-[2500ms]"
             )}
           >
             <span className="relative flex items-center justify-center">

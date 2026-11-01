@@ -37,6 +37,48 @@ const HomePage = () => {
     });
   };
 
+  // Smart suggestion based on real data
+  const [ignored, setIgnored] = useState<string[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem("mf_ignored_sugg") || "[]"); } catch { return []; }
+  });
+  const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate() + 1);
+  const tomorrow = `${tomorrowD.getFullYear()}-${String(tomorrowD.getMonth() + 1).padStart(2, "0")}-${String(tomorrowD.getDate()).padStart(2, "0")}`;
+  const candidates: { key: string; text: string; title: string }[] = [
+    ...unpaidExpenses.map((e) => ({
+      key: `exp-${e.id}`,
+      text: `Ainda não pagou "${e.title}" (${Number(e.amount).toLocaleString()} ${e.currency}). Quer um lembrete para amanhã?`,
+      title: `Pagar ${e.title}`,
+    })),
+    ...tasks.filter((x) => !x.completed).map((x) => ({
+      key: `task-${x.id}`,
+      text: `A tarefa "${x.title}" ainda está pendente. Quer um lembrete para amanhã?`,
+      title: `Lembrete: ${x.title}`,
+    })),
+    { key: "default-plan", text: t("home.aiSuggestionText"), title: "Planear o dia de amanhã" },
+  ];
+  const suggestion = candidates.find((c) => !ignored.includes(c.key));
+
+  const ignoreSuggestion = () => {
+    if (!suggestion) return;
+    const next = [...ignored, suggestion.key];
+    setIgnored(next);
+    sessionStorage.setItem("mf_ignored_sugg", JSON.stringify(next));
+  };
+
+  const acceptSuggestion = () => {
+    if (!suggestion) return;
+    createTask.mutate(
+      { title: suggestion.title, due_date: tomorrow } as Parameters<typeof createTask.mutate>[0],
+      {
+        onSuccess: () => {
+          toast({ title: "Lembrete criado para amanhã!" });
+          ignoreSuggestion();
+        },
+        onError: (e: Error) => toast({ title: "Erro ao criar lembrete", description: e.message, variant: "destructive" }),
+      }
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background safe-top">
       <header className="px-5 pt-6 pb-4">
@@ -117,6 +159,7 @@ const HomePage = () => {
       </section>
 
       {/* AI Suggestions */}
+      {suggestion && (
       <section className="px-5 py-4">
         <Card className="shadow-soft border-0 gradient-calm text-white overflow-hidden">
           <CardContent className="p-4">
@@ -127,13 +170,24 @@ const HomePage = () => {
               <div className="flex-1">
                 <p className="font-medium">{t("home.aiSuggestion")}</p>
                 <p className="text-sm text-white/80 mt-1">
-                  {t("home.aiSuggestionText")}
+                  {suggestion.text}
                 </p>
                 <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="bg-white/20 hover:bg-white/30 text-white border-0"
+                    disabled={createTask.isPending}
+                    onClick={acceptSuggestion}
+                  >
                     {t("home.createReminder")}
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-white/70 hover:text-white hover:bg-white/10"
+                    onClick={ignoreSuggestion}
+                  >
                     {t("home.ignore")}
                   </Button>
                 </div>
@@ -142,6 +196,7 @@ const HomePage = () => {
           </CardContent>
         </Card>
       </section>
+      )}
 
       {/* FAB */}
       <Button
