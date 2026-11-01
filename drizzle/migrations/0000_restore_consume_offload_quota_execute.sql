@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.consume_offload_quota() TO authenticated;
