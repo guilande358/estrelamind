@@ -8,7 +8,10 @@ import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import PaymentProofSheet from "@/components/premium/PaymentProofSheet";
 import { usePaymentRequests } from "@/hooks/usePaymentRequests";
-import { PAYMENT_ACCOUNTS, type PlanId } from "@/config/payments";
+import { type PlanId } from "@/config/payments";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const PremiumPage = () => {
   const { t } = useTranslation();
@@ -25,6 +28,21 @@ const PremiumPage = () => {
   const startPlan = (p: PlanId) => {
     setPlan(p);
     setSheetOpen(true);
+  };
+
+  const [loading, setLoading] = useState(false);
+  const startCheckout = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("walled-create-checkout");
+      if (error || !data?.ok || !data?.url) {
+        toast.error(`Não foi possível abrir o pagamento: ${data?.error || error?.message || "erro"}`);
+        return;
+      }
+      window.location.href = data.url;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const features = [
@@ -117,66 +135,32 @@ const PremiumPage = () => {
         })}
       </div>
 
-      {/* Plans */}
-      {!pending && (
-        <div className="px-5 py-4 space-y-3">
-          <Card
-            className="border-2 border-primary cursor-pointer hover:shadow-md transition-shadow relative"
-            onClick={() => startPlan("yearly")}
-          >
-            <Badge className="absolute -top-2.5 left-4 bg-primary text-primary-foreground text-xs">
-              {t("premium.bestValue")}
-            </Badge>
-            <CardContent className="p-5 pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-foreground text-lg">{t("premium.yearly")}</p>
-                  <p className="text-primary text-xs font-medium">{t("premium.yearlySave")}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-primary">2.990 MT</p>
-                  <p className="text-xs text-muted-foreground">{t("premium.perYear")}</p>
-                </div>
+      {/* Plan (monthly via Walled) */}
+      <div className="px-5 py-4 space-y-3">
+        <Card className="border-2 border-primary">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-foreground text-lg">{t("premium.monthly")}</p>
+                <p className="text-muted-foreground text-xs">{t("premium.monthlyCancel")}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="border cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => startPlan("monthly")}
-          >
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-foreground text-lg">{t("premium.monthly")}</p>
-                  <p className="text-muted-foreground text-xs">{t("premium.monthlyCancel")}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-foreground">299 MT</p>
-                  <p className="text-xs text-muted-foreground">{t("premium.perMonth")}</p>
-                </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-primary">299 MT</p>
+                <p className="text-xs text-muted-foreground">{t("premium.perMonth")}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* How it works */}
-      <div className="px-5 py-2">
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
-            <p className="font-semibold text-foreground text-sm mb-2">{t("premium.howTitle")}</p>
-            <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>{t("premium.how1", { mpesa: PAYMENT_ACCOUNTS.mpesa.number, emola: PAYMENT_ACCOUNTS.emola.number })}</li>
-              <li>{t("premium.how2")}</li>
-              <li>{t("premium.how3")}</li>
-            </ol>
+            </div>
+            <Button className="w-full mt-4" size="lg" onClick={startCheckout} disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Crown className="w-4 h-4 mr-2" />}
+              Assinar agora
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">M-Pesa, e-Mola ou cartão</p>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="px-5 py-4 text-center">
-        <p className="text-xs text-muted-foreground">{t("premium.manualNotice")}</p>
+        {!pending && (
+          <button className="w-full text-xs text-muted-foreground underline" onClick={() => startPlan("monthly")}>
+            Prefere enviar comprovativo manual?
+          </button>
+        )}
       </div>
 
       <PaymentProofSheet

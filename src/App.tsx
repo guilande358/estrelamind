@@ -25,6 +25,7 @@ import PerfilPage from "./pages/PerfilPage";
 import PremiumPage from "./pages/PremiumPage";
 import ReportsPage from "./pages/ReportsPage";
 import AdminPaymentsPage from "./pages/AdminPaymentsPage";
+import BillingReturnPage from "./pages/BillingReturnPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,8 @@ const App = () => (
                 <Route path="/premium" element={<PremiumPage />} />
                 <Route path="/relatorios" element={<ReportsPage />} />
                 <Route path="/admin/pagamentos" element={<AdminPaymentsPage />} />
+                <Route path="/billing/success" element={<BillingReturnPage success />} />
+                <Route path="/billing/cancel" element={<BillingReturnPage success={false} />} />
                 <Route element={<AppLayout />}>
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/agenda" element={<AgendaPage />} />
