@@ -35,7 +35,12 @@ serve(async (req) => {
       });
     }
 
-    const { text, language, context, localDate, localTime, timeZone, weekday } = await req.json();
+    const { text, history, userName, language, context, localDate, localTime, timeZone, weekday } = await req.json();
+    const safeHistory = (Array.isArray(history) ? history : [])
+      .slice(-10)
+      .filter((m: any) => m && typeof m.content === 'string' && m.content.trim())
+      .map((m: any) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content.slice(0, 1500) }));
+    const safeName = typeof userName === 'string' ? userName.replace(/[^\p{L}\p{N} .'-]/gu, '').slice(0, 60) : '';
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
     if (!text) {
@@ -80,7 +85,9 @@ Reply ONLY with valid JSON, no markdown:
       body: JSON.stringify({
         model: 'google/gemini-3-flash-preview',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: systemPrompt + (safeName ? `\n\nThe user's name is ${safeName}.` : '') +
+            `\n\nMEMORY: Earlier turns of this conversation are included below. Use them to understand short replies like "sim", "faz isso", "e depois?". Never greet again or restart the conversation if there is history.` },
+          ...safeHistory,
           { role: 'user', content: text },
         ],
         response_format: { type: 'json_object' },
