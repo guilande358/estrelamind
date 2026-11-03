@@ -106,9 +106,11 @@ const OffloadPage = () => {
   }, [pendingText]);
 
   const speak = (text: string) => {
-    if (muted) return;
-    if (isPremium) elevenLabs.speak(text);
-    else tts.speak(text);
+    if (muted || !text) return;
+    if (isPremium) {
+      // Premium voice first; if it fails for any reason, use the device voice
+      elevenLabs.speak(text).then((ok) => { if (!ok) tts.speak(text); });
+    } else tts.speak(text);
   };
 
   const insertMessage = async (msg: Omit<DbMessage, "id" | "created_at">) => {
@@ -259,8 +261,15 @@ const localNowTime = () => {
         unreadMessages: unreadCount,
       };
 
+      // Conversation memory: last 10 messages (oldest first)
+      const history = messages
+        .slice(-10)
+        .filter((m) => m.content)
+        .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: String(m.content).slice(0, 1500) }));
+      const userName = (profile as any)?.display_name || (profile as any)?.full_name || "";
+
       const { data, error } = await supabase.functions.invoke("offload-process", {
-        body: { text, language: i18n.language, context, localDate: today, localTime, timeZone, weekday },
+        body: { text, history, userName, language: i18n.language, context, localDate: today, localTime, timeZone, weekday },
       });
       if (error) throw error;
 
