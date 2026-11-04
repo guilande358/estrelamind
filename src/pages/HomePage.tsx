@@ -9,11 +9,13 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
 import TaskForm from "@/components/tasks/TaskForm";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
   const currentMonth = today.slice(0, 7);
   const currentHour = new Date().getHours();
