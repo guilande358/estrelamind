@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
-import { STOP_WORDS, containsAny, stripTrailingStopWord } from "@/contexts/VoiceCaptureContext";
+import { containsAny, stripTrailingStopWord } from "@/contexts/VoiceCaptureContext";
 import { cn } from "@/lib/utils";
 
 interface Line {
@@ -19,10 +19,13 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Sends the recognised text through the app AI pipeline and returns the reply. */
   onSend: (text: string) => Promise<string | undefined>;
+  /** Speaks with the app's voice pipeline (Premium ElevenLabs + native fallback). Resolves when done. */
+  onSpeak?: (text: string) => Promise<boolean>;
 }
 
-const SILENCE_MS = 1600;
-const WAKE_WORDS = ["alice", "alise", "alici", "ei alice", "hey alice", "ola alice", "oi alice"];
+// Wait this long without new speech before assuming the user finished talking.
+const SILENCE_MS = 1800;
+const STOP_WORDS = ["terminado", "terminei", "pronto", "finalizado", "acabei", "done", "finished", "stop", "listo", "fini"];
 
 /** Requests the real microphone and releases the stream right away. */
 const ensureMicrophone = async (): Promise<"ok" | "unsupported" | "notfound" | "denied"> => {
@@ -43,7 +46,7 @@ const ensureMicrophone = async (): Promise<"ok" | "unsupported" | "notfound" | "
   }
 };
 
-const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
+const VoiceAssistantSheet = ({ open, onOpenChange, onSend, onSpeak }: Props) => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const recognition = useSpeechRecognition();
@@ -51,12 +54,15 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
 
   const [lines, setLines] = useState<Line[]>([]);
   const [thinking, setThinking] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [active, setActive] = useState(false);
-  const [waking, setWaking] = useState(false);
+  const [greeted, setGreeted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSentRef = useRef("");
   const busyRef = useRef(false);
+  const speakRef = useRef(onSpeak);
+  speakRef.current = onSpeak;
 
   const { transcript, interimTranscript, isListening, isSupported, start, stop, reset } = recognition;
 
@@ -64,6 +70,8 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [lines.length, thinking]);
 
+  // Everything below describes the *pipeline state*: listening is paused only while
+  // Alice is thinking or speaking, so she never talks over the user.
   const process = useCallback(
     async (text: string) => {
       busyRef.current = true;
@@ -76,12 +84,16 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
         const reply = await onSend(text);
         if (reply) {
           setLines((p) => [...p, { role: "assistant", text: reply }]);
-          tts.speak(reply);
+          setThinking(false);
+          setSpeaking(true);
+          const ok = await (speakRef.current ? speakRef.current(reply) : tts.speak(reply));
+          if (!ok) setLines((p) => p); // reply stays visible in the chat even without audio
         }
       } catch (e) {
         console.error("voice assistant error", e);
         toast({ title: t("offload.errorProcess"), variant: "destructive" });
       } finally {
+        setSpeaking(false);
         setThinking(false);
         busyRef.current = false;
       }
@@ -91,15 +103,15 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
 
   const end = useCallback(() => {
     setActive(false);
-    setWaking(false);
+    setGreeted(false);
     stop();
     reset();
     tts.stop();
   }, [reset, stop, tts]);
 
-  // Auto-send after a short silence, or immediately on a stop word
+  // Auto-send once the user stops talking (never mid-sentence).
   useEffect(() => {
-    if (!open || !active || busyRef.current) return;
+    if (!open || !active || busyRef.current || thinking || speaking || tts.isSpeaking) return;
     const raw = (transcript || "").trim();
     if (!raw || raw === lastSentRef.current) return;
 
@@ -108,44 +120,39 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
 
     if (timerRef.current) clearTimeout(timerRef.current);
 
-    if (hasStopWord) {
+    if (hasStopWord && !text) {
+      // User said "done": close this listening session (the sheet itself stays open).
       lastSentRef.current = raw;
-      if (text) {
-        process(text).finally(() => end());
-      } else {
-        end();
-      }
+      reset();
+      end();
       return;
     }
 
     timerRef.current = setTimeout(() => {
       lastSentRef.current = raw;
-      process(text);
+      process(hasStopWord ? text : raw);
     }, SILENCE_MS);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [transcript, interimTranscript, open, active, process, end]);
+  }, [transcript, interimTranscript, open, active, thinking, speaking, tts.isSpeaking, process, end, reset]);
 
-  // Wake word: while idle, say "Alice" to start talking without touching a button
+  // Resume continuous listening whenever Alice is neither thinking nor speaking.
   useEffect(() => {
-    if (!open || active || !waking) return;
-    const heard = `${transcript || ""} ${interimTranscript || ""}`;
-    if (!heard.trim()) return;
-    if (containsAny(heard, WAKE_WORDS)) {
-      reset();
-      setWaking(false);
-      setActive(true);
-    }
-  }, [transcript, interimTranscript, open, active, waking, reset]);
-
-  // Resume listening once the reply finished speaking
-  useEffect(() => {
-    if (!open || (!active && !waking)) return;
-    if (thinking || tts.isSpeaking || isListening) return;
-    const id = setTimeout(() => start(), 400);
+    if (!open || !active) return;
+    if (thinking || speaking || tts.isSpeaking || isListening) return;
+    const id = setTimeout(() => start(), 350);
     return () => clearTimeout(id);
-  }, [open, active, waking, thinking, tts.isSpeaking, isListening, start]);
+  }, [open, active, thinking, speaking, tts.isSpeaking, isListening, start]);
+
+  // Watchdog: mobile browsers drop continuous recognition silently — restart it.
+  useEffect(() => {
+    if (!open || !active) return;
+    const id = setInterval(() => {
+      if (!busyRef.current && !thinking && !speaking && !tts.isSpeaking && !isListening) start();
+    }, 2500);
+    return () => clearInterval(id);
+  }, [open, active, thinking, speaking, tts.isSpeaking, isListening, start]);
 
   const requestMic = useCallback(async () => {
     if (!isSupported) {
@@ -175,12 +182,21 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
 
   const begin = useCallback(async () => {
     if (!(await requestMic())) return;
-    setWaking(false);
     setActive(true);
+    reset();
+    if (!greeted) {
+      setGreeted(true);
+      const greeting = t("offload.aliceGreeting", {
+        defaultValue: "Oi! Aqui é a Alice. Pode falar comigo como se eu fosse uma amiga — o que você precisa hoje?",
+      });
+      setSpeaking(true);
+      await (speakRef.current ? speakRef.current(greeting) : tts.speak(greeting));
+      setSpeaking(false);
+    }
     start();
-  }, [requestMic, start]);
+  }, [requestMic, start, reset, greeted, tts, t]);
 
-  // On open: request the real mic and stay in wake-word mode
+  // On open: request the real microphone and start the conversation right away.
   useEffect(() => {
     if (!open) {
       end();
@@ -189,8 +205,8 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
     }
     let cancelled = false;
     (async () => {
-      const ok = await requestMic();
-      if (!cancelled && ok) setWaking(true);
+      if (cancelled) return;
+      await begin();
     })();
     return () => {
       cancelled = true;
@@ -203,12 +219,10 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
 
   const statusText = thinking
     ? t("offload.thinking")
-    : tts.isSpeaking
+    : speaking || tts.isSpeaking
     ? t("offload.assistantSpeaking", { defaultValue: "A responder..." })
     : active && isListening
     ? t("offload.assistantListening", { defaultValue: "A ouvir..." })
-    : waking
-    ? t("offload.assistantWake", { defaultValue: 'Diga "Alice" para começar' })
     : t("offload.assistantIdle", { defaultValue: "Toque para falar" });
 
   return (
@@ -226,7 +240,7 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
             className={cn(
               "w-28 h-28 rounded-full flex items-center justify-center transition-all",
               active ? "gradient-calm shadow-lg" : "bg-muted",
-              (tts.isSpeaking || (active && isListening)) && "animate-pulse scale-105"
+              ((speaking || tts.isSpeaking) || (active && isListening)) && "animate-pulse scale-105"
             )}
           >
             {thinking ? (
@@ -273,9 +287,8 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend }: Props) => {
             </Button>
           )}
           <p className="text-[11px] text-center text-muted-foreground mt-2">
-            {t("offload.assistantHint", {
-              defaultValue:
-                'Diga "Alice" para começar, "pode criar..." para criar itens e "terminado" para encerrar.',
+            {t("offload.assistantHintContinuous", {
+              defaultValue: "Fale naturalmente — a Alice responde quando você termina. Toque em Parar para encerrar.",
             })}
           </p>
         </div>
