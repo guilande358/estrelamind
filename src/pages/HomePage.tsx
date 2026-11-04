@@ -9,11 +9,13 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { useAuth } from "@/contexts/AuthContext";
 import TaskForm from "@/components/tasks/TaskForm";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
   const currentMonth = today.slice(0, 7);
   const currentHour = new Date().getHours();
@@ -105,7 +107,14 @@ const HomePage = () => {
               <p className="text-xs text-muted-foreground">{t("home.tasks")}</p>
             </CardContent>
           </Card>
-          <Card className="shadow-card border-0">
+          <Card
+            className="shadow-card border-0 cursor-pointer active:scale-95 transition-transform"
+            role="button"
+            tabIndex={0}
+            aria-label={`${unpaidExpenses.length} despesas pendentes. Abrir lista`}
+            onClick={() => navigate("/financas?tab=pendentes")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/financas?tab=pendentes"); }}
+          >
             <CardContent className="p-3 text-center">
               <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-2">
                 <CreditCard className="w-5 h-5 text-secondary" />
