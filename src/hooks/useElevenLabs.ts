@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseElevenLabsReturn {
-  /** Resolves true if audio played, false if it failed (caller should fall back). */
+  /** Resolves true only after the audio finished playing; false if it failed. */
   speak: (text: string) => Promise<boolean>;
   isSpeaking: boolean;
   isLoading: boolean;
@@ -52,13 +52,24 @@ export const useElevenLabs = (): UseElevenLabsReturn => {
       const blob = await response.blob();
       if (!blob.size) throw new Error('empty audio');
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onplay = () => { setIsSpeaking(true); setIsLoading(false); };
-      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(url); };
-      audio.onerror = () => { setIsSpeaking(false); setIsLoading(false); URL.revokeObjectURL(url); };
+      const ended = new Promise<boolean>((resolve) => {
+        const cleanup = (ok: boolean) => {
+          URL.revokeObjectURL(url);
+          if (audioRef.current === audio) audioRef.current = null;
+          resolve(ok);
+        };
+        audio.onended = () => {
+          setIsSpeaking(false);
+          cleanup(true);
+        };
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          cleanup(false);
+        };
+      });
       audioRef.current = audio;
       await audio.play();
-      return true;
+      return ended;
     } catch (e) {
       console.warn('ElevenLabs TTS unavailable, falling back:', e);
       setIsLoading(false);
