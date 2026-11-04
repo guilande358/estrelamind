@@ -7,7 +7,8 @@ import { useTranslation } from "react-i18next";
 import { useExpenses } from "@/hooks/useExpenses";
 import ExpenseForm from "@/components/expenses/ExpenseForm";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useExchangeRates, convert, formatMoney } from "@/hooks/useExchangeRates";
 
@@ -31,8 +32,14 @@ const FinancasPage = () => {
   const { data: rates } = useExchangeRates("USD");
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [formOpen, setFormOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: "mes" | "pendentes" | "todas" =
+    tabParam === "pendentes" || tabParam === "todas" ? tabParam : "mes";
+  const setTab = (v: string) => setSearchParams(v === "mes" ? {} : { tab: v }, { replace: true });
 
-  const { data: expenses = [], createExpense, deleteExpense, togglePaid } = useExpenses({ month: currentMonth });
+  const filters = tab === "pendentes" ? { paid: false } : tab === "todas" ? undefined : { month: currentMonth };
+  const { data: expenses = [], createExpense, deleteExpense, togglePaid } = useExpenses(filters);
 
   // Convert each expense to target currency
   const convertedExpenses = expenses.map((e) => ({
@@ -76,11 +83,23 @@ const FinancasPage = () => {
         </div>
       </header>
 
+      <div className="px-5">
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="mes">Este mês</TabsTrigger>
+            <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
+            <TabsTrigger value="todas">Todas</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {/* Total Card */}
       <div className="px-5 py-3">
         <Card className="shadow-soft border-0 gradient-nature text-white overflow-hidden">
           <CardContent className="p-5">
-            <p className="text-white/80 text-sm">{t("finances.monthSpending")}</p>
+            <p className="text-white/80 text-sm">
+              {tab === "pendentes" ? "Total pendente" : tab === "todas" ? "Total de todas as despesas" : t("finances.monthSpending")}
+            </p>
             <div className="flex items-end gap-2 mt-1">
               <span className="text-3xl font-bold">{formatMoney(totalSpent, targetCurrency)}</span>
             </div>
@@ -124,7 +143,9 @@ const FinancasPage = () => {
       <section className="px-5 py-4">
         <h2 className="text-lg font-semibold text-foreground mb-3">{t("finances.bills")}</h2>
         {expenses.length === 0 ? (
-          <p className="text-muted-foreground text-sm text-center py-6">Nenhuma despesa este mês</p>
+          <p className="text-muted-foreground text-sm text-center py-6">
+            {tab === "pendentes" ? "Nenhuma despesa pendente" : tab === "todas" ? "Nenhuma despesa registada" : "Nenhuma despesa este mês"}
+          </p>
         ) : (
           <div className="space-y-3">
             {convertedExpenses.map((expense) => (
