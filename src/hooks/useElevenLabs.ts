@@ -52,6 +52,8 @@ export const useElevenLabs = (): UseElevenLabsReturn => {
       const blob = await response.blob();
       if (!blob.size) throw new Error('empty audio');
       const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onplay = () => { setIsSpeaking(true); setIsLoading(false); };
       const ended = new Promise<boolean>((resolve) => {
         const cleanup = (ok: boolean) => {
           URL.revokeObjectURL(url);

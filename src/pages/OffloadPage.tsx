@@ -105,13 +105,19 @@ const OffloadPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingText]);
 
-  const speak = (text: string) => {
-    if (muted || !text) return;
+  // Resolves when the audio finished, so voice mode only listens again afterwards.
+  const speakAsync = async (text: string): Promise<boolean> => {
+    if (muted || !text) return false;
+    tts.stop();
+    elevenLabs.stop();
     if (isPremium) {
-      // Premium voice first; if it fails for any reason, use the device voice
-      elevenLabs.speak(text).then((ok) => { if (!ok) tts.speak(text); });
-    } else tts.speak(text);
+      // Premium voice first; if it fails for any reason, use the device (female) voice
+      const ok = await elevenLabs.speak(text);
+      if (ok) return true;
+    }
+    return tts.speak(text);
   };
+  const speak = (text: string) => { void speakAsync(text); };
 
   const insertMessage = async (msg: Omit<DbMessage, "id" | "created_at">) => {
     if (!user) return null;
@@ -511,7 +517,7 @@ const localNowTime = () => {
                 <MessageSquare className="w-5 h-5 text-primary" />
               </Button>
             ) : (
-              <Button variant="ghost" size="icon" className="rounded-full shrink-0" onClick={openVoice} title={t("offload.fabLabel")}>
+              <Button variant="ghost" size="icon" className="rounded-full shrink-0" onClick={() => setAliceOpen(true)} title={t("offload.fabLabel")}>
                 <Mic className="w-5 h-5 text-primary" />
               </Button>
             )}
@@ -544,6 +550,7 @@ const localNowTime = () => {
         open={aliceOpen}
         onOpenChange={setAliceOpen}
         onSend={(text) => handleSend(text, { silent: true })}
+        onSpeak={async (text) => { const ok = await speakAsync(text); return ok; }}
       />
     </div>
   );
