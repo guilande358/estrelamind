@@ -28,12 +28,16 @@ const seen = new Set<string>();
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("ok");
   const raw = await req.text();
-  const secret = (Deno.env.get("WALLED_WEBHOOK_SECRET") || "").trim();
-  if (!secret) {
+  const secrets = [Deno.env.get("WALLED_WEBHOOK_SECRET"), Deno.env.get("STRIPE_WEBHOOK_SECRET")]
+    .map((s) => (s || "").trim()).filter(Boolean);
+  if (!secrets.length) {
     console.error("WALLED_WEBHOOK_SECRET not set");
     return new Response("not configured", { status: 500 });
   }
-  if (!(await verify(raw, req.headers.get("Walled-Signature"), secret))) {
+  const sigHeader = req.headers.get("Walled-Signature");
+  let valid = false;
+  for (const s of secrets) if (await verify(raw, sigHeader, s)) { valid = true; break; }
+  if (!valid) {
     return new Response("invalid signature", { status: 401 });
   }
   const evt = JSON.parse(raw);
