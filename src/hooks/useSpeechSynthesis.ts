@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { detectLang, LANG_TAGS } from '@/lib/detectLang';
 
 interface SpeechSynthesisHook {
   /** Resolves true when the text finished playing, false when it could not play. */
@@ -77,12 +78,19 @@ export const useSpeechSynthesis = (): SpeechSynthesisHook => {
     };
   }, [isSupported]);
 
-  const pickVoice = useCallback((): SpeechSynthesisVoice | undefined => {
+  const pickVoice = useCallback((base: string): SpeechSynthesisVoice | undefined => {
     if (!voices.length) return undefined;
-    const lang = (i18n.language || 'pt-BR').toLowerCase().replace('_', '-');
-    const base = lang.split('-')[0];
+    // Only voices of the spoken language — a foreign voice reading it causes a strong accent.
     const inLang = voices.filter((v) => v.lang.toLowerCase().replace('_', '-').startsWith(base));
-    const pool = inLang.length ? inLang : voices;
+    if (!inLang.length) return undefined;
+    const prefer = base === 'pt' ? ['pt-br', 'pt-pt', 'pt-mz'] : [];
+    const pool = [...inLang].sort((a, b) => {
+      const ia = prefer.indexOf(a.lang.toLowerCase().replace('_', '-'));
+      const ib = prefer.indexOf(b.lang.toLowerCase().replace('_', '-'));
+      const sa = (a.localService ? 0 : -1) + (ia === -1 ? 9 : ia);
+      const sb = (b.localService ? 0 : -1) + (ib === -1 ? 9 : ib);
+      return sa - sb;
+    });
     const female = pool.find((v) => {
       const n = v.name.toLowerCase();
       return FEMALE_NAMES.some((f) => n.includes(f)) && !MALE_HINTS.some((m) => n.includes(m));
@@ -92,7 +100,7 @@ export const useSpeechSynthesis = (): SpeechSynthesisHook => {
       (v) => !MALE_HINTS.some((m) => v.name.toLowerCase().includes(m)) && v.name.toLowerCase() !== 'male'
     );
     return notMale || pool[0];
-  }, [voices, i18n.language]);
+  }, [voices]);
 
   const clearKeepAlive = () => {
     if (keepAliveRef.current !== null) {
@@ -130,8 +138,10 @@ export const useSpeechSynthesis = (): SpeechSynthesisHook => {
       cancelledRef.current = false;
 
       const chunks = splitChunks(text);
-      const voice = pickVoice();
-      const langTag = (i18n.language || 'pt-BR').includes('-') ? i18n.language : `${i18n.language}-BR`;
+      const uiBase = (i18n.language || 'pt').toLowerCase().split(/[-_]/)[0];
+      const base = detectLang(text, LANG_TAGS[uiBase] ? uiBase : 'pt');
+      const voice = pickVoice(base);
+      const langTag = voice?.lang || LANG_TAGS[base] || 'pt-BR';
 
       return new Promise<boolean>((resolve) => {
         finishRef.current = resolve;
