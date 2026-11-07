@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     try { data = JSON.parse(text); } catch { /* ignore */ }
     if (!res.ok) {
       console.error("walled checkout error", res.status, text);
-      return json({ ok: false, error: data?.error?.message || data?.message || data?.error || `HTTP ${res.status}` });
+      return json({ ok: false, error: data?.detail || data?.error?.message || data?.message || data?.error || `HTTP ${res.status}` });
     }
     const d = data?.data ?? data;
     const url = d?.url || d?.checkoutUrl || d?.checkout_url || d?.session?.url;
