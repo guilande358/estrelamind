@@ -126,7 +126,9 @@
     "voiceUnsupported": "Tu navegador no admite reconocimiento de voz",
     "micNotFound": "No se encontró ningún micrófono en el dispositivo",
     "micUnsupported": "Este navegador no puede acceder al micrófono",
-    "micDenied": "Permiso de micrófono denegado. Actívalo en los ajustes del navegador."
+    "micDenied": "Permiso de micrófono denegado. Actívalo en los ajustes del navegador.",
+    "aliceGreeting": "¡Hola! Soy Alice. Háblame como a una amiga — ¿qué necesitas hoy?",
+    "assistantHintContinuous": "Habla con naturalidad — Alice responde cuando terminas. Toca Parar para terminar."
   },
   "profile": {
     "title": "Perfil",

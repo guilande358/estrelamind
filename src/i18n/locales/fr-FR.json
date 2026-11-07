@@ -126,7 +126,9 @@
     "voiceUnsupported": "Votre navigateur ne prend pas en charge la reconnaissance vocale",
     "micNotFound": "Aucun microphone détecté sur cet appareil",
     "micUnsupported": "Ce navigateur ne peut pas accéder au microphone",
-    "micDenied": "Accès au microphone refusé. Autorisez-le dans les réglages du navigateur."
+    "micDenied": "Accès au microphone refusé. Autorisez-le dans les réglages du navigateur.",
+    "aliceGreeting": "Salut ! C'est Alice. Parle-moi comme à une amie — de quoi as-tu besoin aujourd'hui ?",
+    "assistantHintContinuous": "Parlez naturellement — Alice répond quand vous avez fini. Touchez Arrêter pour terminer."
   },
   "profile": {
     "title": "Profil",

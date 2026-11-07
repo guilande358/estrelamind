@@ -126,7 +126,9 @@
     "voiceUnsupported": "Your browser does not support speech recognition",
     "micNotFound": "No microphone found on this device",
     "micUnsupported": "This browser cannot access the microphone",
-    "micDenied": "Microphone permission denied. Allow it in your browser settings."
+    "micDenied": "Microphone permission denied. Allow it in your browser settings.",
+    "aliceGreeting": "Hi! It's Alice. Talk to me like a friend — what do you need today?",
+    "assistantHintContinuous": "Speak naturally — Alice replies when you finish. Tap Stop to end."
   },
   "profile": {
     "title": "Profile",
