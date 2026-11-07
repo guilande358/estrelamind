@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
+import { detectLang, LANG_TAGS } from '@/lib/detectLang';
 
 interface UseElevenLabsReturn {
   /** Resolves true only after the audio finished playing; false if it failed. */
@@ -45,7 +46,10 @@ export const useElevenLabs = (): UseElevenLabsReturn => {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ text, language: i18n.language }),
+          body: JSON.stringify({
+            text,
+            language: LANG_TAGS[detectLang(text, (i18n.language || 'pt').split(/[-_]/)[0])] || 'pt-BR',
+          }),
         }
       );
       if (!response.ok) throw new Error(`TTS failed ${response.status}`);
