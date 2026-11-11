@@ -58,7 +58,9 @@ const AliceAgentSheetInner = ({ open, onOpenChange }: Props) => {
   const start = useCallback(async () => {
     setConnecting(true);
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Check permission, then release the mic right away so WebRTC can take it cleanly
+      const checkStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      checkStream.getTracks().forEach((track) => track.stop());
       await conversation.startSession({
         agentId: ALICE_AGENT_ID,
         connectionType: "webrtc",
@@ -82,6 +84,14 @@ const AliceAgentSheetInner = ({ open, onOpenChange }: Props) => {
       console.error(e);
     }
   }, [conversation]);
+
+  // Always end the session if the sheet unmounts mid-call
+  useEffect(() => {
+    return () => {
+      try { void Promise.resolve(conversation.endSession()).catch(() => {}); } catch { /* ignore */ }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // End the call when the sheet closes
   useEffect(() => {
