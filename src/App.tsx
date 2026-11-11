@@ -10,6 +10,7 @@ import { VoiceCaptureProvider } from "@/contexts/VoiceCaptureContext";
 
 // Layouts
 import AppLayout from "./components/layout/AppLayout";
+import NativeLoginPage from "./pages/NativeLoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
@@ -44,6 +45,7 @@ const App = () => (
               {/* Public Routes */}
               <Route path="/" element={<OnboardingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/native-login" element={<NativeLoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               
               {/* Protected Routes */}

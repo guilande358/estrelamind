@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { lovable } from "@/integrations/lovable/index";
 import { useGuest } from "@/contexts/GuestContext";
 import { cn } from "@/lib/utils";
+import { isNativeApp, startNativeGoogleLogin } from "@/lib/nativeAuth";
 
 interface Props {
   className?: string;
@@ -35,6 +36,10 @@ const GoogleSignInButton = ({ className, label, redirectTo = "/home" }: Props) =
     setLoading(true);
     try {
       sessionStorage.setItem("mf_post_login_path", redirectTo);
+      if (isNativeApp()) {
+        await startNativeGoogleLogin();
+        return;
+      }
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
         extraParams: { prompt: "select_account" },
