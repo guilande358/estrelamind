@@ -8,6 +8,7 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { containsAny, stripTrailingStopWord } from "@/contexts/VoiceCaptureContext";
 import { cn } from "@/lib/utils";
+import { canUseMicrophone, releaseGlobalStream, stopStream } from "@/lib/audioStreams";
 
 interface Line {
   role: "user" | "assistant";
@@ -29,20 +30,23 @@ const STOP_WORDS = ["terminado", "terminei", "pronto", "finalizado", "acabei", "
 
 /** Requests the real microphone and releases the stream right away. */
 const ensureMicrophone = async (): Promise<"ok" | "unsupported" | "notfound" | "denied"> => {
-  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return "unsupported";
+  if (!canUseMicrophone()) return "unsupported";
   try {
     const devices = await navigator.mediaDevices.enumerateDevices?.();
     if (devices && devices.length && !devices.some((d) => d.kind === "audioinput")) return "notfound";
   } catch {
     /* enumerateDevices may fail before permission is granted — ignore */
   }
+  let stream: MediaStream | null = null;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((track) => track.stop());
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     return "ok";
   } catch (e: any) {
     if (e?.name === "NotFoundError" || e?.name === "OverconstrainedError") return "notfound";
     return "denied";
+  } finally {
+    stopStream(stream);
+    releaseGlobalStream();
   }
 };
 
@@ -104,9 +108,14 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend, onSpeak }: Props) => 
   const end = useCallback(() => {
     setActive(false);
     setGreeted(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    busyRef.current = false;
+    setThinking(false);
+    setSpeaking(false);
     stop();
     reset();
     tts.stop();
+    releaseGlobalStream();
   }, [reset, stop, tts]);
 
   // Auto-send once the user stops talking (never mid-sentence).
@@ -190,8 +199,13 @@ const VoiceAssistantSheet = ({ open, onOpenChange, onSend, onSpeak }: Props) => 
         defaultValue: "Oi! Aqui é a Alice. Pode falar comigo como se eu fosse uma amiga — o que você precisa hoje?",
       });
       setSpeaking(true);
-      await (speakRef.current ? speakRef.current(greeting) : tts.speak(greeting));
-      setSpeaking(false);
+      try {
+        await (speakRef.current ? speakRef.current(greeting) : tts.speak(greeting));
+      } catch (e) {
+        console.error("greeting failed", e);
+      } finally {
+        setSpeaking(false);
+      }
     }
     start();
   }, [requestMic, start, reset, greeted, tts, t]);

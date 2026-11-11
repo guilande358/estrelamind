@@ -6,6 +6,7 @@ import { useVoiceCapture, STOP_WORDS, containsAny, stripTrailingStopWord } from 
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { acquireMicrophone, canUseMicrophone, releaseGlobalStream, stopStream } from "@/lib/audioStreams";
 
 const VoiceCaptureOverlay = () => {
   const { isOpen, close, setPendingText } = useVoiceCapture();
@@ -19,6 +20,17 @@ const VoiceCaptureOverlay = () => {
   const rafRef = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  const releaseAudioStreams = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    stopStream(streamRef.current);
+    streamRef.current = null;
+    releaseGlobalStream();
+    try { audioCtxRef.current?.close().catch(() => {}); } catch { /* ignore */ }
+    audioCtxRef.current = null;
+    setLevel(0);
+  };
+
   // Start microphone visualizer + recognition when opened
   useEffect(() => {
     if (!isOpen) return;
@@ -30,33 +42,47 @@ const VoiceCaptureOverlay = () => {
         close();
         return;
       }
+      if (!canUseMicrophone()) {
+        toast({ title: t("offload.speechNotSupported"), variant: "destructive" });
+        close();
+        return;
+      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await acquireMicrophone();
+        if (!stream) throw new Error("mic unavailable");
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          stopStream(stream);
+          releaseGlobalStream();
           return;
         }
         streamRef.current = stream;
         const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioCtx();
-        audioCtxRef.current = ctx;
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        source.connect(analyser);
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        const tick = () => {
-          analyser.getByteFrequencyData(data);
-          let sum = 0;
-          for (let i = 0; i < data.length; i++) sum += data[i];
-          const avg = sum / data.length / 255;
-          setLevel(avg);
-          rafRef.current = requestAnimationFrame(tick);
-        };
-        tick();
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          audioCtxRef.current = ctx;
+          const source = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          source.connect(analyser);
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          const tick = () => {
+            if (!audioCtxRef.current) return;
+            analyser.getByteFrequencyData(data);
+            let sum = 0;
+            for (let i = 0; i < data.length; i++) sum += data[i];
+            setLevel(sum / data.length / 255);
+            rafRef.current = requestAnimationFrame(tick);
+          };
+          tick();
+        }
       } catch (e) {
         console.error("Mic access denied:", e);
+        releaseAudioStreams();
+        toast({ title: t("offload.micDenied", { defaultValue: "Não foi possível aceder ao microfone" }), variant: "destructive" });
+        close();
+        return;
       }
+      if (cancelled) return;
       speech.reset();
       speech.start();
     };
@@ -64,11 +90,7 @@ const VoiceCaptureOverlay = () => {
 
     return () => {
       cancelled = true;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-      audioCtxRef.current?.close().catch(() => {});
-      audioCtxRef.current = null;
+      releaseAudioStreams();
       speech.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,6 +112,7 @@ const VoiceCaptureOverlay = () => {
     const cleaned = stripTrailingStopWord(raw);
     speech.stop();
     speech.reset();
+    releaseAudioStreams();
     close();
     if (cleaned) {
       setPendingText(cleaned);
@@ -100,6 +123,7 @@ const VoiceCaptureOverlay = () => {
   const cancel = () => {
     speech.stop();
     speech.reset();
+    releaseAudioStreams();
     close();
   };
 
