@@ -44,6 +44,24 @@ jobs:
             grep -q "RECORD_AUDIO" "$MANIFEST" || sed -i 's#<application#<uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <application#' "$MANIFEST"
           fi
 
+      - name: Register mindflow:// deep link (Google login return)
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          grep -q 'android:scheme="mindflow"' "$MANIFEST" || python3 - "$MANIFEST" <<'PY'
+          import sys
+          p = sys.argv[1]
+          s = open(p).read()
+          f = """<intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="mindflow" android:host="auth" />
+                      </intent-filter>
+                  </activity>"""
+          s = s.replace("</activity>", f, 1)
+          open(p, "w").write(s)
+          PY
+
       - name: Build APK with Gradle
         working-directory: android
         run: |
