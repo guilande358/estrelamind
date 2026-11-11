@@ -88,7 +88,7 @@ const AliceAgentSheetInner = ({ open, onOpenChange }: Props) => {
   // Always end the session if the sheet unmounts mid-call
   useEffect(() => {
     return () => {
-      conversation.endSession().catch(() => {});
+      try { void Promise.resolve(conversation.endSession()).catch(() => {}); } catch { /* ignore */ }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
