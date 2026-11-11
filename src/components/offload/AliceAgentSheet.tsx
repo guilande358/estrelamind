@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { canUseMicrophone, releaseGlobalStream, stopStream } from "@/lib/audioStreams";
 
 export const ALICE_AGENT_ID = "agent_9401m1nnwgxtf0yt8m5zydk620rd";
 
@@ -56,11 +57,18 @@ const AliceAgentSheetInner = ({ open, onOpenChange }: Props) => {
   }, [lines.length]);
 
   const start = useCallback(async () => {
+    if (!canUseMicrophone()) {
+      toast({ title: t("offload.micUnsupported", { defaultValue: "Este dispositivo não permite usar o microfone" }), variant: "destructive" });
+      return;
+    }
     setConnecting(true);
+    let checkStream: MediaStream | null = null;
     try {
       // Check permission, then release the mic right away so WebRTC can take it cleanly
-      const checkStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      checkStream.getTracks().forEach((track) => track.stop());
+      checkStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stopStream(checkStream);
+      checkStream = null;
+      releaseGlobalStream();
       await conversation.startSession({
         agentId: ALICE_AGENT_ID,
         connectionType: "webrtc",
@@ -74,6 +82,8 @@ const AliceAgentSheetInner = ({ open, onOpenChange }: Props) => {
         }),
         variant: "destructive",
       });
+    } finally {
+      stopStream(checkStream);
     }
   }, [conversation, t, toast]);
 
@@ -82,6 +92,9 @@ const AliceAgentSheetInner = ({ open, onOpenChange }: Props) => {
       await conversation.endSession();
     } catch (e) {
       console.error(e);
+    } finally {
+      setConnecting(false);
+      releaseGlobalStream();
     }
   }, [conversation]);
 

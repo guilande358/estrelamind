@@ -11,13 +11,17 @@ interface SpeechRecognitionHook {
   reset: () => void;
 }
 
-// Language mapping for Web Speech API
 const langMap: Record<string, string> = {
   'pt-BR': 'pt-BR',
   'en-US': 'en-US',
   'fr-FR': 'fr-FR',
   'es-ES': 'es-ES',
 };
+
+const getRecognitionCtor = (): any =>
+  typeof window !== 'undefined'
+    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null
+    : null;
 
 export const useSpeechRecognition = (): SpeechRecognitionHook => {
   const { i18n } = useTranslation();
@@ -26,73 +30,83 @@ export const useSpeechRecognition = (): SpeechRecognitionHook => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
-  const SpeechRecognition = typeof window !== 'undefined'
-    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    : null;
-
+  const SpeechRecognition = getRecognitionCtor();
   const isSupported = !!SpeechRecognition;
 
-  const stop = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+  /** Detaches handlers and stops/aborts the recognizer, always resetting state. */
+  const teardown = useCallback(() => {
+    const rec = recognitionRef.current;
+    recognitionRef.current = null;
+    if (rec) {
+      rec.onresult = null;
+      rec.onerror = null;
+      rec.onend = null;
+      rec.onabort = null;
+      try { rec.abort?.(); } catch { /* ignore */ }
+      try { rec.stop?.(); } catch { /* ignore */ }
     }
     setIsListening(false);
   }, []);
 
+  const stop = useCallback(() => {
+    teardown();
+  }, [teardown]);
+
   const start = useCallback(() => {
-    if (!SpeechRecognition) return;
-
-    stop();
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = langMap[i18n.language] || 'pt-BR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = (event: any) => {
-      let final = '';
-      let interim = '';
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          final += result[0].transcript;
-        } else {
-          interim += result[0].transcript;
-        }
-      }
-      setTranscript(final);
-      setInterimTranscript(interim);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error !== 'aborted') {
-        setIsListening(false);
-      }
-    };
-
-    recognition.onend = () => {
+    if (!SpeechRecognition) {
       setIsListening(false);
-    };
+      return;
+    }
+    teardown();
 
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  }, [SpeechRecognition, i18n.language, stop]);
+    let recognition: any;
+    try {
+      recognition = new SpeechRecognition();
+      recognition.lang = langMap[i18n.language] || 'pt-BR';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event: any) => {
+        let final = '';
+        let interim = '';
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) final += result[0].transcript;
+          else interim += result[0].transcript;
+        }
+        setTranscript(final);
+        setInterimTranscript(interim);
+      };
+
+      const finishSession = () => {
+        if (recognitionRef.current === recognition) recognitionRef.current = null;
+        setIsListening(false);
+      };
+      recognition.onerror = (event: any) => {
+        if (event?.error !== 'aborted' && event?.error !== 'no-speech') {
+          console.error('Speech recognition error:', event?.error);
+        }
+        finishSession();
+      };
+      recognition.onend = finishSession;
+      recognition.onabort = finishSession;
+
+      recognitionRef.current = recognition;
+      recognition.start();
+      setIsListening(true);
+    } catch (e) {
+      console.error('Speech recognition failed to start:', e);
+      recognitionRef.current = null;
+      setIsListening(false);
+    }
+  }, [SpeechRecognition, i18n.language, teardown]);
 
   const reset = useCallback(() => {
     setTranscript('');
     setInterimTranscript('');
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
+  useEffect(() => () => teardown(), [teardown]);
 
   return { transcript, interimTranscript, isListening, isSupported, start, stop, reset };
 };
